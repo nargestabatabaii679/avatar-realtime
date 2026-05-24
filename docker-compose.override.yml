@@ -1,0 +1,135 @@
+###############################################################################
+# docker-compose.override.yml — Development overrides
+#
+# Automatically merged with docker-compose.yml by Docker Compose.
+# Never commit secrets here; use .env for all credentials.
+#
+# Features:
+#   - Hot-reload for backend (uvicorn --reload)
+#   - Hot-reload for frontend (Vite dev server)
+#   - Exposed debug ports (debugpy on 5678)
+#   - Relaxed resource limits
+#   - Verbose logging
+###############################################################################
+
+version: "3.9"
+
+services:
+
+  # ── Backend: hot-reload via uvicorn --reload ───────────────────────────────
+  backend:
+    build:
+      target: builder                # Use the lighter builder stage for faster rebuilds
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+        --reload-dir /app
+        --log-level debug
+        --use-colors
+    volumes:
+      # Mount source for live editing — changes are reflected without rebuilding
+      - ./backend:/app:cached
+      - models_data:/opt/models:ro
+      - storage_data:/tmp/avatar-platform
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: console
+      DATABASE_ECHO: "true"          # Log all SQL statements
+      # Enable Python debugger
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:5678:5678"       # debugpy remote debugging port
+
+  # ── GPU Worker: hot-reload ─────────────────────────────────────────────────
+  worker-gpu:
+    build:
+      target: builder
+    volumes:
+      - ./backend:/app:cached
+      - models_data:/opt/models:ro
+      - storage_data:/tmp/avatar-platform
+    environment:
+      LOG_LEVEL: DEBUG
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+  # ── CPU Worker: hot-reload ─────────────────────────────────────────────────
+  worker-cpu:
+    build:
+      target: builder
+    volumes:
+      - ./backend:/app:cached
+      - storage_data:/tmp/avatar-platform
+    environment:
+      LOG_LEVEL: DEBUG
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+  # ── Beat: source mount ─────────────────────────────────────────────────────
+  beat:
+    build:
+      target: builder
+    volumes:
+      - ./backend:/app:cached
+
+  # ── Frontend: Vite dev server ──────────────────────────────────────────────
+  frontend:
+    build:
+      target: builder                # Only the node build stage is needed
+    # Override the production nginx command with the Vite dev server
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules             # anonymous volume prevents host overwrite
+    ports:
+      - "127.0.0.1:3000:3000"        # Vite dev server (not nginx in dev)
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: "http://localhost:8000/api/v1"
+      VITE_WS_BASE_URL: "ws://localhost:8000/ws"
+    # No health check in dev — Vite starts fast enough
+
+  # ── PostgreSQL: expose for GUI clients (TablePlus, DBeaver, etc.) ──────────
+  postgres:
+    ports:
+      - "5432:5432"                  # Expose publicly on loopback in dev
+
+  # ── Redis: expose for redis-cli / GUI ─────────────────────────────────────
+  redis:
+    ports:
+      - "6379:6379"
+
+  # ── MinIO: expose console for bucket management ────────────────────────────
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  # ── Qdrant: expose REST + gRPC for dev tooling ────────────────────────────
+  qdrant:
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
+  # ── Flower: expose without auth restrictions in dev ────────────────────────
+  flower:
+    ports:
+      - "5555:5555"
+    environment:
+      FLOWER_BASIC_AUTH: ""          # Disable basic auth in dev
+
+  # ── Prometheus: expose directly ───────────────────────────────────────────
+  prometheus:
+    ports:
+      - "9090:9090"
+
+  # ── Grafana: expose directly ───────────────────────────────────────────────
+  grafana:
+    ports:
+      - "3001:3000"

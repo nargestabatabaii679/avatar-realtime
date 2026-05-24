@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" class="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- PWA Meta -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AvatarAI" />
+
+    <!-- SEO -->
+    <meta name="description" content="AI Digital Human Platform - Create realistic AI avatars, clone voices, and generate videos with AI" />
+    <meta name="keywords" content="AI avatar, digital human, voice cloning, video generation, AI agent" />
+    <meta name="author" content="AvatarAI Platform" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="AvatarAI - AI Digital Human Platform" />
+    <meta property="og:description" content="Create realistic AI avatars and generate videos with AI" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AvatarAI Platform" />
+    <meta name="twitter:description" content="Create realistic AI avatars with AI" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Google Fonts - Inter (LTR) -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Vazirmatn - Persian/Arabic font -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- JetBrains Mono for code -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>AvatarAI - AI Digital Human Platform</title>
+
+    <!-- Inline critical theme script to prevent flash -->
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem('theme') || 'system';
+          const lang = localStorage.getItem('language') || 'en';
+          const html = document.documentElement;
+
+          if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+          }
+
+          const rtlLangs = ['fa', 'ar', 'he', 'ur'];
+          if (rtlLangs.includes(lang)) {
+            html.dir = 'rtl';
+            html.lang = lang;
+          } else {
+            html.dir = 'ltr';
+            html.lang = lang;
+          }
+
+          // Apply font based on language
+          if (lang === 'fa' || lang === 'ar') {
+            html.style.fontFamily = "'Vazirmatn', system-ui, sans-serif";
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

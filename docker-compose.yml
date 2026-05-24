@@ -1,0 +1,498 @@
+###############################################################################
+# AI Digital Human Platform — Docker Compose (Production-like dev stack)
+#
+# Usage:
+#   docker compose up -d              # start all services
+#   docker compose --profile gpu up   # include GPU workers
+#
+# All secrets come from the .env file (copy from .env.example).
+# Named volumes survive container restarts; to wipe: docker compose down -v
+###############################################################################
+
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# Shared extension fragments
+# ---------------------------------------------------------------------------
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+x-restart: &restart-policy
+  restart: unless-stopped
+
+x-gpu-device: &gpu-device
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: 1                 # request exactly 1 GPU
+            capabilities: [gpu]
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  internal:
+    # Backend services talk to each other on this private network.
+    driver: bridge
+    internal: false                  # allow outbound internet (model downloads)
+    ipam:
+      config:
+        - subnet: "172.20.0.0/16"
+
+  external:
+    # Nginx faces the outside world; only nginx + prometheus/grafana join this.
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Volumes (named, persisted across restarts)
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  minio_data:
+    driver: local
+  models_data:
+    # Shared read-only volume for downloaded AI model weights.
+    driver: local
+  storage_data:
+    # Scratch / processed files for the backend.
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    <<: *restart-policy
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-avatar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_db}
+      # Performance tuning for a containerised deployment
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: drop custom init SQL files here
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"       # bind to localhost only — not publicly exposed
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-avatar_user} -d ${POSTGRES_DB:-avatar_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - internal
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+    command: >
+      redis-server
+        --maxmemory 2gb
+        --maxmemory-policy allkeys-lru
+        --save 60 1000
+        --save 300 100
+        --save 900 1
+        --appendonly yes
+        --appendfsync everysec
+        --loglevel notice
+
+  # ── Qdrant (vector database) ───────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "127.0.0.1:6333:6333"       # REST API
+      - "127.0.0.1:6334:6334"       # gRPC API
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/readyz | grep -q 'ok'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - internal
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      # Enable telemetry only if you opt-in
+      QDRANT__TELEMETRY_DISABLED: "true"
+
+  # ── MinIO (object storage) ─────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"       # S3-compatible API
+      - "127.0.0.1:9001:9001"       # Web console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      # Prometheus metrics — scrape at /minio/v2/metrics/cluster
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - internal
+
+  # MinIO bucket initialiser — runs once, then exits.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - internal
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+        mc mb --ignore-existing local/avatars &&
+        mc mb --ignore-existing local/videos &&
+        mc mb --ignore-existing local/voices &&
+        mc mb --ignore-existing local/documents &&
+        mc mb --ignore-existing local/models &&
+        mc mb --ignore-existing local/temp &&
+        echo 'MinIO buckets initialised.'
+      "
+
+  # ── FastAPI backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    <<: [*restart-policy, *gpu-device]
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - models_data:/opt/models:ro    # read-only model weights
+      - storage_data:/tmp/avatar-platform
+    environment:
+      # Application
+      APP_NAME: ${APP_NAME:-AvatarPlatform}
+      ENVIRONMENT: ${APP_ENV:-development}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DEBUG: ${DEBUG:-false}
+      # Database
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-avatar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_db}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      # MinIO
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_SECURE: "false"
+      # Qdrant
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      # AI APIs
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      # Sentry
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      # GPU
+      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - internal
+
+  # ── Celery GPU worker ──────────────────────────────────────────────────────
+  worker-gpu:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    <<: [*restart-policy, *gpu-device]
+    logging: *default-logging
+    command: >
+      celery -A app.core.celery_app worker
+        --queues=gpu_tasks
+        --concurrency=1
+        --loglevel=INFO
+        --hostname=gpu-worker@%h
+        --max-tasks-per-child=50
+    volumes:
+      - models_data:/opt/models:ro
+      - storage_data:/tmp/avatar-platform
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      POSTGRES_SERVER: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-avatar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_db}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      QDRANT_HOST: qdrant
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES:-0}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - internal
+
+  # ── Celery CPU worker ──────────────────────────────────────────────────────
+  worker-cpu:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    command: >
+      celery -A app.core.celery_app worker
+        --queues=cpu_tasks
+        --concurrency=4
+        --loglevel=INFO
+        --hostname=cpu-worker@%h
+        --max-tasks-per-child=200
+    volumes:
+      - storage_data:/tmp/avatar-platform
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      POSTGRES_SERVER: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-avatar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_db}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      QDRANT_HOST: qdrant
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Disable GPU for CPU workers to avoid CUDA memory contention
+      CUDA_VISIBLE_DEVICES: ""
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - internal
+
+  # ── Celery beat scheduler ─────────────────────────────────────────────────
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    command: >
+      celery -A app.core.celery_app beat
+        --loglevel=INFO
+        --scheduler=celery.beat:PersistentScheduler
+        --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - storage_data:/tmp/avatar-platform
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      POSTGRES_SERVER: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-avatar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-avatar_db}
+      CUDA_VISIBLE_DEVICES: ""
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - internal
+
+  # ── Flower (Celery monitoring UI) ─────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      FLOWER_PORT: 5555
+      # Basic auth — change in production
+      FLOWER_BASIC_AUTH: ${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-flowerpass}
+      FLOWER_PERSISTENT: "true"
+    depends_on:
+      - redis
+    networks:
+      - internal
+
+  # ── Frontend (Next.js / Vite) ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:3000:80"          # nginx serves the built assets
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost/api/v1}
+      VITE_WS_BASE_URL: ${VITE_WS_BASE_URL:-ws://localhost/ws}
+    depends_on:
+      - backend
+    networks:
+      - internal
+      - external
+
+  # ── Nginx (reverse proxy) ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      # TLS certificates — use certbot or provide your own
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - internal
+      - external
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"      # allow hot config reload via POST /-/reload
+    networks:
+      - internal
+      - external
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./infrastructure/monitoring/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    depends_on:
+      - prometheus
+    networks:
+      - internal
+      - external
