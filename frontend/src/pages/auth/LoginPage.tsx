@@ -4,237 +4,232 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Loader2, Sparkles, Zap, Shield } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, Shield, Globe } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { cn } from "../../utils/cn";
 
 const schema = z.object({
-  email: z.string().email("Invalid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("ایمیل نامعتبر"),
+  password: z.string().min(6, "رمز باید حداقل ۶ کاراکتر باشد"),
 });
 type FormData = z.infer<typeof schema>;
 
 const features = [
-  { icon: Sparkles, text: "Realistic AI Avatars" },
-  { icon: Zap, text: "Real-time < 1.2s Latency" },
-  { icon: Shield, text: "Enterprise Security" },
+  { icon: "🎭", title: "آواتار واقعی",     desc: "تبدیل عکس به آواتار سخنگو با هوش مصنوعی" },
+  { icon: "🗣️", title: "صدای طبیعی",     desc: "کلونینگ صدا با XTTS-v2 بهینه برای فارسی" },
+  { icon: "⚡", title: "لیپ‌سینک ۵۰fps",   desc: "حرکات طبیعی لب، پلک و میکروحالت‌ها" },
+  { icon: "🌐", title: "چندزبانه",         desc: "فارسی، انگلیسی، عربی، ترکی و بیشتر" },
 ];
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   const onSubmit = async (data: FormData) => {
-    setError(null);
+    setErr(null);
     try {
       await login(data.email, data.password);
       navigate("/dashboard");
     } catch (e: any) {
-      setError(e.message || "Invalid credentials. Please try again.");
+      setErr(e.message || "ایمیل یا رمز عبور اشتباه است");
     }
   };
 
   return (
-    <div className="min-h-screen flex overflow-hidden">
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-[52%] relative flex-col justify-between p-12 bg-mesh overflow-hidden">
-        {/* Animated orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)", animation: "float 6s ease-in-out infinite" }} />
-          <div className="absolute bottom-[-5%] right-[-5%] w-[400px] h-[400px] rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%)", animation: "float 8s ease-in-out infinite reverse" }} />
-          <div className="absolute top-[40%] right-[10%] w-[300px] h-[300px] rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)", animation: "float 5s ease-in-out infinite 1s" }} />
-          {/* Grid pattern */}
-          <div className="absolute inset-0 opacity-[0.04]"
-            style={{ backgroundImage: "linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+    <div className="min-h-screen flex overflow-hidden bg-background">
+
+      {/* ─── Left: Cinematic Panel ─── */}
+      <div className="hidden lg:flex lg:w-[54%] relative flex-col bg-mesh noise overflow-hidden">
+        {/* Grid pattern */}
+        <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
+
+        {/* Floating orbs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[-8%] left-[-8%] w-[520px] h-[520px] rounded-full opacity-30"
+            style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", animation: "float 7s ease-in-out infinite" }} />
+          <div className="absolute bottom-[-6%] right-[-6%] w-[420px] h-[420px] rounded-full opacity-25"
+            style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)", animation: "float 9s ease-in-out infinite reverse" }} />
+          <div className="absolute top-[45%] right-[8%] w-[280px] h-[280px] rounded-full opacity-20"
+            style={{ background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)", animation: "float 6s ease-in-out infinite 1.5s" }} />
         </div>
 
-        {/* Logo */}
-        <div className="relative z-10 animate-fade-in-down">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary)" }}>
-              <span className="text-white font-black text-lg">A</span>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col h-full p-12">
+          {/* Logo */}
+          <div className="flex items-center gap-3 animate-fade-in-down">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
+              style={{ background: "var(--gradient-primary)", boxShadow: "0 0 32px rgba(91,95,239,.6)" }}>
+              <span className="text-white font-black text-xl">A</span>
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">Avatar Platform</span>
-          </div>
-        </div>
-
-        {/* Hero text */}
-        <div className="relative z-10 animate-fade-in-up" style={{ animationDelay: ".1s" }}>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6 text-xs font-medium text-indigo-300"
-            style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            AI Digital Human Platform
+            <div>
+              <p className="text-white font-bold text-base leading-none">Avatar</p>
+              <p className="text-white/50 text-xs leading-none mt-0.5">AI Platform</p>
+            </div>
           </div>
 
-          <h1 className="text-5xl xl:text-6xl font-extrabold text-white leading-tight mb-6">
-            Create{" "}
-            <span className="relative">
-              <span className="gradient-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">
-                Lifelike
+          {/* Hero */}
+          <div className="flex-1 flex flex-col justify-center animate-fade-in-up" style={{ animationDelay: ".1s" }}>
+            {/* Live badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7 w-fit"
+              style={{ background: "rgba(91,95,239,.18)", border: "1px solid rgba(91,95,239,.35)" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-indigo-200 text-xs font-medium">هوش مصنوعی نسل جدید</span>
+            </div>
+
+            <h1 className="text-5xl xl:text-6xl font-black text-white leading-[1.1] mb-6">
+              ساخت<br />
+              <span className="gradient-text" style={{ backgroundImage: "linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 50%, #f0abfc 100%)" }}>
+                آواتار
               </span>
-            </span>
-            {" "}AI Avatars
-          </h1>
+              <br />سخن‌گو
+            </h1>
 
-          <p className="text-lg text-indigo-200/80 leading-relaxed max-w-md mb-10">
-            Build, train, and deploy realistic talking avatars with real-time conversational AI.
-            Self-hosted. GPU-accelerated. RTL-ready.
-          </p>
+            <p className="text-indigo-200/70 text-base leading-relaxed max-w-sm mb-10">
+              عکس انسان را آپلود کنید، متن بنویسید،<br />
+              ویدیوی آواتار سخنگو بسازید — مثل D-ID و HeyGen
+            </p>
 
-          {/* Feature pills */}
-          <div className="flex flex-col gap-3">
-            {features.map(({ icon: Icon, text }, i) => (
-              <div key={text} className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: `${.2 + i * .08}s` }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.3)" }}>
-                  <Icon size={15} className="text-indigo-300" />
+            {/* Features */}
+            <div className="grid grid-cols-2 gap-3">
+              {features.map(({ icon, title, desc }, i) => (
+                <div key={title}
+                  className="p-3.5 rounded-2xl animate-fade-in-up"
+                  style={{
+                    animationDelay: `${.2 + i * .07}s`,
+                    background: "rgba(255,255,255,.05)",
+                    border: "1px solid rgba(255,255,255,.08)",
+                    backdropFilter: "blur(12px)",
+                  }}>
+                  <div className="text-2xl mb-1.5">{icon}</div>
+                  <p className="text-white text-sm font-bold mb-0.5">{title}</p>
+                  <p className="text-white/50 text-xs leading-relaxed">{desc}</p>
                 </div>
-                <span className="text-indigo-100/90 text-sm font-medium">{text}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Bottom quote */}
-        <div className="relative z-10 animate-fade-in" style={{ animationDelay: ".5s" }}>
-          <p className="text-white/30 text-xs">© 2024 Avatar Platform — Enterprise AI Communications</p>
+          <p className="text-white/20 text-xs animate-fade-in" style={{ animationDelay: ".6s" }}>
+            © 2024 Avatar Platform · پلتفرم آواتار هوش مصنوعی
+          </p>
         </div>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-background relative">
+      {/* ─── Right: Form ─── */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Subtle bg pattern */}
+        <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
+
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center animate-fade-in">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
-            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary)" }}>
+            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary-lg)" }}>
             <span className="text-white font-black text-xl">A</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Avatar Platform</h1>
+          <h1 className="text-2xl font-black text-foreground">Avatar Platform</h1>
         </div>
 
-        <div className="w-full max-w-[400px] animate-fade-in-up" style={{ animationDelay: ".05s" }}>
+        <div className="relative z-10 w-full max-w-[400px] animate-fade-in-up" style={{ animationDelay: ".05s" }}>
           {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-            <p className="text-muted-foreground mt-1.5 text-sm">Sign in to your account to continue</p>
+          <div className="mb-7">
+            <h2 className="text-2xl font-black text-foreground">خوش آمدید</h2>
+            <p className="text-muted-foreground mt-1.5 text-sm">وارد حساب کاربری خود شوید</p>
           </div>
 
           {/* Error */}
-          {error && (
+          {err && (
             <div className="mb-5 p-3.5 rounded-xl flex items-start gap-3 animate-scale-in"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-              <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-red-500 text-xs font-bold">!</span>
+              style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.2)" }}>
+              <div className="w-5 h-5 rounded-full bg-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-red-500 text-xs font-black">!</span>
               </div>
-              <p className="text-red-500 text-sm">{error}</p>
+              <p className="text-red-500 text-sm" dir="rtl">{err}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" dir="rtl">
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-foreground">
-                {t("auth.email")}
-              </label>
+              <label className="block text-sm font-semibold text-foreground">ایمیل</label>
               <input
                 type="email"
                 autoComplete="email"
                 {...register("email")}
-                className={cn(
-                  "input-field",
-                  errors.email && "border-red-500 focus:border-red-500"
-                )}
-                placeholder="you@company.com"
+                className={cn("input-field text-left", errors.email && "border-red-500")}
+                placeholder="you@example.com"
+                dir="ltr"
               />
-              {errors.email && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <span>·</span> {errors.email.message}
-                </p>
-              )}
+              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-foreground">
-                  {t("auth.password")}
-                </label>
-                <a href="#" className="text-xs text-primary hover:text-primary/80 transition-colors">
-                  {t("auth.forgotPassword")}
-                </a>
+                <label className="block text-sm font-semibold text-foreground">رمز عبور</label>
+                <a href="#" className="text-xs text-primary hover:text-primary/80 transition-colors">فراموشی رمز</a>
               </div>
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPw ? "text" : "password"}
                   autoComplete="current-password"
                   {...register("password")}
-                  className={cn(
-                    "input-field pe-11",
-                    errors.password && "border-red-500 focus:border-red-500"
-                  )}
+                  className={cn("input-field ps-11", errors.password && "border-red-500")}
                   placeholder="••••••••"
+                  dir="ltr"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 end-0 flex items-center pe-3.5 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute inset-y-0 start-0 flex items-center ps-3.5 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <span>·</span> {errors.password.message}
-                </p>
-              )}
+              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
             </div>
 
             {/* Submit */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn-primary w-full mt-2"
+              className="btn-primary w-full py-3 text-base mt-2"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                t("auth.login")
-              )}
+              {isSubmitting
+                ? <><Loader2 size={16} className="animate-spin" /> در حال ورود…</>
+                : "ورود به حساب"}
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
+            <span className="text-xs text-muted-foreground">یا</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Register link */}
           <p className="text-center text-sm text-muted-foreground">
-            {t("auth.noAccount")}{" "}
-            <a href="#" className="text-primary font-medium hover:text-primary/80 transition-colors">
-              {t("auth.register")}
-            </a>
+            حساب ندارید؟{" "}
+            <a href="#" className="text-primary font-bold hover:text-primary/80 transition-colors">ثبت‌نام کنید</a>
           </p>
 
-          <p className="text-center text-xs text-muted-foreground/50 mt-8">
-            © 2024 Avatar Platform
-          </p>
+          {/* Trust badges */}
+          <div className="flex items-center justify-center gap-4 mt-8">
+            {[
+              { icon: Zap, text: "GPU-Accelerated" },
+              { icon: Shield, text: "Self-Hosted" },
+              { icon: Globe, text: "RTL-Ready" },
+            ].map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-1 text-muted-foreground/50">
+                <Icon size={11} />
+                <span className="text-[10px]">{text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
