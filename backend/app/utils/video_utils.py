@@ -199,6 +199,48 @@ async def convert_to_hls(input_path: str, output_dir: str, resolutions: Optional
     return str(playlist)
 
 
+async def frames_to_video(
+    frames: list,
+    audio_path: str,
+    output_path: str,
+    fps: float = 25.0,
+) -> None:
+    """Write a list of BGR numpy frames to an MP4 with the given audio track."""
+    import tempfile
+    import numpy as np
+    import cv2
+
+    if not frames:
+        raise ValueError("frames_to_video: empty frame list")
+
+    h, w = frames[0].shape[:2]
+    tmp_video = output_path + ".silent.mp4"
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    for frame in frames:
+        writer.write(frame if frame.dtype == np.uint8 else (frame * 255).astype(np.uint8))
+    writer.release()
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", tmp_video,
+        "-i", audio_path,
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "18",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-shortest",
+        "-movflags", "+faststart",
+        "-pix_fmt", "yuv420p",
+        output_path,
+    ]
+    _run_ffmpeg(cmd)
+    Path(tmp_video).unlink(missing_ok=True)
+    logger.info("frames_to_video_done", frames=len(frames), fps=fps, output=output_path)
+
+
 def _run_ffmpeg(cmd: list[str]) -> None:
     """Run ffmpeg command, raising on failure."""
     result = subprocess.run(cmd, capture_output=True, text=True)

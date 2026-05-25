@@ -123,45 +123,87 @@ def generate_video_task(
 
             # ---- Step 2: TTS Synthesis (40%) ----
             _update_job_progress(video_id, 20, "tts_synthesis")
-            from app.ml.voice.xtts_engine import XTTSEngine
 
-            tts = XTTSEngine()
+            # Download voice fingerprint from MinIO
             voice_model_obj = "/".join(voice.model_file_url.split("/")[1:])
-            voice_model_path = tmp / "voice_model.pth"
-            await download_to_path("voices", voice_model_obj, voice_model_path)
+            voice_fp_path = tmp / "voice_fingerprint.npz"
+            await download_to_path("voices", voice_model_obj, voice_fp_path)
+
+            # Load fingerprint
+            import numpy as np
+            from app.ml.voice.xtts_engine import VoiceFingerprint, XTTSEngine
+            fp_data = np.load(str(voice_fp_path), allow_pickle=True)
+            fingerprint = VoiceFingerprint(
+                speaker_embedding=fp_data["speaker_embedding"],
+                gpt_cond_latent=fp_data["gpt_cond_latent"],
+                language=language,
+            )
 
             tts_start = time.time()
-            await tts.synthesize(
-                text=script,
-                language=language,
-                voice_model_path=str(voice_model_path),
-                output_path=str(audio_path),
-                speed=options.get("speed", 1.0),
-            )
+
+            if language == "fa":
+                # Use Persian-optimised synthesizer
+                from app.ml.voice.persian_tts import get_persian_synthesizer
+                synth = get_persian_synthesizer()
+                audio_array = synth.synthesize(
+                    text=script,
+                    fingerprint=fingerprint,
+                    speed=options.get("speed", 1.0),
+                    language="fa",
+                )
+                wav_bytes = synth.to_wav_bytes(audio_array)
+                audio_path.write_bytes(wav_bytes)
+            else:
+                engine_xtts = XTTSEngine.get_instance()
+                result = engine_xtts.synthesize(
+                    text=script,
+                    fingerprint=fingerprint,
+                    language=language,
+                    speed=options.get("speed", 1.0),
+                )
+                if result.success:
+                    audio_path.write_bytes(result.to_wav_bytes())
+                else:
+                    raise RuntimeError(f"TTS failed: {result.error}")
+
             log.info("tts_completed", duration_ms=int((time.time() - tts_start) * 1000))
             _update_job_progress(video_id, 40, "tts_completed")
 
-            # ---- Step 3: Lip Sync (70%) ----
+            # ---- Step 3: Ultra-Natural Lip Sync (70%) ----
             _update_job_progress(video_id, 42, "lip_sync_started")
-            animation_engine = settings.ANIMATION_ENGINE.lower()
 
-            if animation_engine == "liveportrait":
-                from app.ml.avatar.live_portrait import LivePortraitEngine
-                engine = LivePortraitEngine()
-                await engine.animate_with_audio(
-                    source_image_path=str(avatar_path),
-                    audio_path=str(audio_path),
-                    output_path=str(lipsync_path),
-                )
-            else:
-                from app.ml.avatar.wav2lip import Wav2LipEngine
-                engine = Wav2LipEngine()
-                await engine.generate_lipsync_video(
-                    face_image_path=str(avatar_path),
-                    audio_path=str(audio_path),
-                    output_path=str(lipsync_path),
-                )
+            import cv2
+            import soundfile as sf
+            from app.ml.avatar.ultra_lipsync import (
+                UltraLipSyncPipeline, UltraLipSyncConfig, FaceAnalyzer, synthesize_ultra_natural
+            )
+            from app.utils.video_utils import frames_to_video
 
+            source_image = cv2.imread(str(avatar_path))
+            audio_array, audio_sr = sf.read(str(audio_path), dtype="float32")
+            if audio_array.ndim > 1:
+                audio_array = audio_array[:, 0]  # mono
+
+            lipsync_config = UltraLipSyncConfig(
+                fps=25.0,
+                upsample_fps=True,                # 50fps output
+                use_poisson_blend=True,           # seamless blending
+                temporal_smooth_alpha=0.6,
+                enable_eye_blinks=True,
+                enable_micro_expressions=True,
+                micro_expression_strength=0.55,
+            )
+
+            lipsync_frames = synthesize_ultra_natural(
+                source_image=source_image,
+                audio=audio_array,
+                audio_sr=audio_sr,
+                config=lipsync_config,
+            )
+
+            output_fps = 50 if lipsync_config.upsample_fps else 25
+            await frames_to_video(lipsync_frames, str(audio_path), str(lipsync_path), fps=output_fps)
+            log.info("ultra_lipsync_completed", frames=len(lipsync_frames), fps=output_fps)
             _update_job_progress(video_id, 70, "lip_sync_completed")
 
             # ---- Step 4: FFmpeg Render (90%) ----
