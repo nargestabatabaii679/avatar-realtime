@@ -8,11 +8,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react({
-        babel: {
-          plugins: ['@babel/plugin-transform-react-jsx'],
-        },
-      }),
+      react(),
       tailwindcss(),
     ],
     resolve: {
