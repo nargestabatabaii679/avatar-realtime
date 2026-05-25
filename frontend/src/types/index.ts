@@ -242,6 +242,11 @@ export interface AvatarMetadata {
   duration?: number
   face_count?: number
   processing_time?: number
+  quality_score?: number
+  landmarks_count?: number
+  face_bbox?: number[]
+  age?: number
+  gender?: string
 }
 
 export interface CreateAvatarRequest {
