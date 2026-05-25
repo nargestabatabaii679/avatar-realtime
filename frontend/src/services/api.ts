@@ -494,3 +494,6 @@ export const fileApi = {
       },
     }),
 }
+
+// Convenience alias used by page components
+export const api = apiClient
