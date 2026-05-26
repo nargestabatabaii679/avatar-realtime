@@ -417,6 +417,7 @@ export default function VideoStudioPage() {
   const { language: uiLang } = useThemeStore();
   const isFa = uiLang === "fa";
 
+  const [provider, setProvider]   = useState<"local" | "heygen" | "syncso">("local");
   const [avatarId, setAvatarId]   = useState<string | null>(null);
   const [voiceId, setVoiceId]     = useState<string | null>(null);
   const [script, setScript]       = useState("");
@@ -428,6 +429,10 @@ export default function VideoStudioPage() {
   const [genId, setGenId]         = useState<string | null>(null);
   const [genPct, setGenPct]       = useState(0);
   const [genStep, setGenStep]     = useState("downloading_assets");
+  /* HeyGen / Sync.so fields */
+  const [heygenScript, setHeygenScript] = useState("");
+  const [syncVideoFile, setSyncVideoFile] = useState<File | null>(null);
+  const [syncAudioFile, setSyncAudioFile] = useState<File | null>(null);
 
   /* Queries */
   const { data: avData, isLoading: avLoad } = useQuery({
@@ -651,6 +656,107 @@ export default function VideoStudioPage() {
 
         {/* ─ RIGHT: Controls Panel ─ */}
         <div className="card-studio p-4 flex flex-col gap-4">
+
+          {/* Provider selector */}
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">موتور ساخت</p>
+            <div className="flex flex-col gap-1.5">
+              {([
+                { id: "local",  emoji: "🏠", label: "Local AI",  sub: "XTTS-v2 + لیپ‌سینک" },
+                { id: "heygen", emoji: "🎬", label: "HeyGen",    sub: "ابری — API کلید لازم" },
+                { id: "syncso", emoji: "⚡", label: "Sync.so",   sub: "سینک صدا با ویدیو" },
+              ] as const).map(p => (
+                <button key={p.id} onClick={() => setProvider(p.id)}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-2 rounded-xl border text-right transition-all w-full",
+                    provider === p.id
+                      ? "border-primary bg-primary/8 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/30"
+                  )}>
+                  <span className="text-base leading-none">{p.emoji}</span>
+                  <div className="min-w-0 text-right">
+                    <p className={cn("text-xs font-bold truncate", provider === p.id ? "text-primary" : "")}>{p.label}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{p.sub}</p>
+                  </div>
+                  {provider === p.id && <div className="ms-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-border" />
+
+          {/* ── HeyGen provider ── */}
+          {provider === "heygen" && (
+            <div className="flex flex-col gap-3 animate-fade-in">
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">متن گفتار</label>
+                <textarea
+                  value={heygenScript}
+                  onChange={e => setHeygenScript(e.target.value)}
+                  placeholder="متن را بنویسید..."
+                  dir="rtl"
+                  className="w-full h-24 px-3 py-2 bg-muted border border-border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">آواتار HeyGen</label>
+                <select className="input-field text-xs" dir="rtl">
+                  <option>Anna (پیش‌فرض)</option>
+                  <option>James</option>
+                  <option>Aria</option>
+                </select>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-500/8 border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 leading-relaxed">
+                از HeyGen API برای لیپ‌سینک استفاده می‌شود. کلید API را در صفحه <strong>ادغام‌ها</strong> ثبت کنید.
+              </div>
+              <button className="btn-primary w-full justify-center py-3 text-sm mt-auto">
+                <Sparkles size={14} /> ساخت با HeyGen
+              </button>
+            </div>
+          )}
+
+          {/* ── Sync.so provider ── */}
+          {provider === "syncso" && (
+            <div className="flex flex-col gap-3 animate-fade-in">
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">ویدیو ورودی</label>
+                <label className={cn(
+                  "flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+                  syncVideoFile ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                )}>
+                  <input type="file" accept="video/*" className="hidden" onChange={e => setSyncVideoFile(e.target.files?.[0] || null)} />
+                  <Film size={20} className={syncVideoFile ? "text-primary" : "text-muted-foreground"} />
+                  <p className="text-[11px] text-center leading-tight text-muted-foreground">
+                    {syncVideoFile ? syncVideoFile.name : "ویدیو را آپلود کنید\nMP4 · MOV"}
+                  </p>
+                </label>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">فایل صوتی</label>
+                <label className={cn(
+                  "flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+                  syncAudioFile ? "border-emerald-500 bg-emerald-500/5" : "border-border hover:border-emerald-500/40"
+                )}>
+                  <input type="file" accept="audio/*" className="hidden" onChange={e => setSyncAudioFile(e.target.files?.[0] || null)} />
+                  <Mic size={20} className={syncAudioFile ? "text-emerald-500" : "text-muted-foreground"} />
+                  <p className="text-[11px] text-center leading-tight text-muted-foreground">
+                    {syncAudioFile ? syncAudioFile.name : "صدا را آپلود کنید\nMP3 · WAV"}
+                  </p>
+                </label>
+              </div>
+              <div className="p-2.5 rounded-lg bg-violet-500/8 border border-violet-500/20 text-[10px] text-violet-600 dark:text-violet-400 leading-relaxed">
+                Sync.so صدا را با ویدیو سینک می‌کند. کلید API را در ادغام‌ها ثبت کنید.
+              </div>
+              <button disabled={!syncVideoFile || !syncAudioFile} className="btn-primary w-full justify-center py-3 text-sm mt-auto disabled:opacity-40">
+                <Zap size={14} /> سینک با Sync.so
+              </button>
+            </div>
+          )}
+
+          {/* ── Local AI provider ── */}
+          {provider === "local" && <>
+
           {/* Language */}
           <div>
             <div className="flex items-center gap-1.5 mb-2">
@@ -757,6 +863,8 @@ export default function VideoStudioPage() {
               </a>
             )}
           </div>
+
+          </> /* end local AI */}
         </div>
       </div>
 

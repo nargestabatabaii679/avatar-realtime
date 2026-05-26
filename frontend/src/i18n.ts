@@ -27,6 +27,8 @@ i18n
             analytics: "Analytics",
             admin: "Admin",
             realtime: "Real-Time",
+            storyboard: "Storyboard",
+            integrations: "Integrations",
           },
           dashboard: {
             welcome: "Welcome back",
@@ -147,6 +149,8 @@ i18n
             analytics: "آمار و تحلیل",
             admin: "مدیریت",
             realtime: "مکالمه آنی",
+            storyboard: "استوری‌برد",
+            integrations: "ادغام‌ها",
           },
           dashboard: {
             welcome: "خوش آمدید",

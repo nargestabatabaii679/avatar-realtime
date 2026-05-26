@@ -12,6 +12,8 @@ import KnowledgeCenterPage from "./pages/knowledge-center/KnowledgeCenterPage";
 import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 import AdminPage from "./pages/admin/AdminPage";
 import RealtimePage from "./pages/realtime/RealtimePage";
+import StoryboardPage from "./pages/storyboard/StoryboardPage";
+import IntegrationsPage from "./pages/integrations/IntegrationsPage";
 import { useAuthStore } from "./stores/authStore";
 import { useThemeStore } from "./stores/themeStore";
 
@@ -75,6 +77,8 @@ export default function App() {
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="realtime" element={<RealtimePage />} />
+        <Route path="storyboard" element={<StoryboardPage />} />
+        <Route path="integrations" element={<IntegrationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

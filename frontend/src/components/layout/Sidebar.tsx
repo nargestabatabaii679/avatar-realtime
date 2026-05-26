@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, Users, Mic, Video, Bot, BookOpen, BarChart3,
   Settings, Radio, ChevronLeft, ChevronRight, X, LogOut,
+  LayoutTemplate, Plug2,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useAuthStore } from "../../stores/authStore";
@@ -19,9 +20,11 @@ const navItems = [
   { path: "/avatar-studio",   icon: Users,           labelKey: "nav.avatarStudio",    color: "#8b5cf6" },
   { path: "/voice-studio",    icon: Mic,             labelKey: "nav.voiceStudio",     color: "#a855f7" },
   { path: "/video-studio",    icon: Video,           labelKey: "nav.videoStudio",     color: "#06b6d4" },
+  { path: "/storyboard",      icon: LayoutTemplate,  labelKey: "nav.storyboard",      color: "#f59e0b" },
   { path: "/agent-builder",   icon: Bot,             labelKey: "nav.agentBuilder",    color: "#10b981" },
-  { path: "/knowledge-center",icon: BookOpen,        labelKey: "nav.knowledgeCenter", color: "#f59e0b" },
+  { path: "/knowledge-center",icon: BookOpen,        labelKey: "nav.knowledgeCenter", color: "#0891b2" },
   { path: "/analytics",       icon: BarChart3,       labelKey: "nav.analytics",       color: "#ec4899" },
+  { path: "/integrations",    icon: Plug2,           labelKey: "nav.integrations",    color: "#06b6d4" },
   { path: "/realtime",        icon: Radio,           labelKey: "nav.realtime",        color: "#ef4444" },
   { path: "/admin",           icon: Settings,        labelKey: "nav.admin",           color: "#64748b", adminOnly: true },
 ] as const;
