@@ -83,7 +83,7 @@ class Organization(UUIDBase):
 
     # ------------------------------------------------------------------ plan / billing
     plan: Mapped[OrganizationPlan] = mapped_column(
-        Enum(OrganizationPlan, name="organization_plan_enum"),
+        Enum(OrganizationPlan, name="organization_plan_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=OrganizationPlan.FREE,
         server_default=text("'free'"),

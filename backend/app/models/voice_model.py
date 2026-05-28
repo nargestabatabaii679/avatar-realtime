@@ -130,7 +130,7 @@ class VoiceModel(UUIDBase):
 
     # ------------------------------------------------------------------ status / quality
     status: Mapped[VoiceStatus] = mapped_column(
-        Enum(VoiceStatus, name="voice_status_enum"),
+        Enum(VoiceStatus, name="voice_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=VoiceStatus.PROCESSING,
         server_default=text("'processing'"),
@@ -144,7 +144,7 @@ class VoiceModel(UUIDBase):
 
     # ------------------------------------------------------------------ engine
     tts_engine: Mapped[TTSEngine] = mapped_column(
-        Enum(TTSEngine, name="tts_engine_enum"),
+        Enum(TTSEngine, name="tts_engine_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=TTSEngine.XTTS,
         server_default=text("'xtts'"),

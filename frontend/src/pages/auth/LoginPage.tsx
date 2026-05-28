@@ -1,45 +1,74 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Loader2, Zap, Shield, Globe } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, Shield, Globe, User, Mail, Lock } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { cn } from "../../utils/cn";
 
-const schema = z.object({
+const loginSchema = z.object({
   email: z.string().email("ایمیل نامعتبر"),
   password: z.string().min(6, "رمز باید حداقل ۶ کاراکتر باشد"),
 });
-type FormData = z.infer<typeof schema>;
+
+const registerSchema = z.object({
+  full_name: z.string().min(2, "نام باید حداقل ۲ کاراکتر باشد"),
+  email: z.string().email("ایمیل نامعتبر"),
+  password: z.string()
+    .min(8, "رمز باید حداقل ۸ کاراکتر باشد")
+    .regex(/[A-Z]/, "باید حداقل یک حرف بزرگ داشته باشد")
+    .regex(/[0-9]/, "باید حداقل یک عدد داشته باشد")
+    .regex(/[!@#$%^&*()_+\-=\[\]{}|;':\",./<>?]/, "باید حداقل یک کاراکتر خاص داشته باشد"),
+});
+
+type LoginData = z.infer<typeof loginSchema>;
+type RegisterData = z.infer<typeof registerSchema>;
 
 const features = [
-  { icon: "🎭", title: "آواتار واقعی",     desc: "تبدیل عکس به آواتار سخنگو با هوش مصنوعی" },
-  { icon: "🗣️", title: "صدای طبیعی",     desc: "کلونینگ صدا با XTTS-v2 بهینه برای فارسی" },
-  { icon: "⚡", title: "لیپ‌سینک ۵۰fps",   desc: "حرکات طبیعی لب، پلک و میکروحالت‌ها" },
-  { icon: "🌐", title: "چندزبانه",         desc: "فارسی، انگلیسی، عربی، ترکی و بیشتر" },
+  { icon: "🎭", title: "آواتار واقعی",   desc: "تبدیل عکس به آواتار سخنگو با هوش مصنوعی" },
+  { icon: "🗣️", title: "صدای طبیعی",    desc: "کلونینگ صدا با XTTS-v2 بهینه برای فارسی" },
+  { icon: "⚡", title: "لیپ‌سینک ۵۰fps", desc: "حرکات طبیعی لب، پلک و میکروحالت‌ها" },
+  { icon: "🌐", title: "چندزبانه",       desc: "فارسی، انگلیسی، عربی، ترکی و بیشتر" },
 ];
 
 export default function LoginPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, register: registerUser } = useAuthStore();
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
+  const loginForm = useForm<LoginData>({ resolver: zodResolver(loginSchema) });
+  const registerForm = useForm<RegisterData>({ resolver: zodResolver(registerSchema) });
 
-  const onSubmit = async (data: FormData) => {
+  const onLogin = async (data: LoginData) => {
     setErr(null);
     try {
-      await login(data.email, data.password);
+      await login({ email: data.email, password: data.password });
       navigate("/dashboard");
     } catch (e: any) {
-      setErr(e.message || "ایمیل یا رمز عبور اشتباه است");
+      const detail = e?.response?.data?.detail;
+      setErr(typeof detail === "string" ? detail : "ایمیل یا رمز عبور اشتباه است");
     }
+  };
+
+  const onRegister = async (data: RegisterData) => {
+    setErr(null);
+    try {
+      await registerUser({ email: data.email, password: data.password, full_name: data.full_name });
+      navigate("/dashboard");
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      setErr(typeof detail === "string" ? detail : "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید");
+    }
+  };
+
+  const switchMode = (m: "login" | "register") => {
+    setMode(m);
+    setErr(null);
+    loginForm.reset();
+    registerForm.reset();
   };
 
   return (
@@ -47,7 +76,6 @@ export default function LoginPage() {
 
       {/* ─── Left: Cinematic Panel ─── */}
       <div className="hidden lg:flex lg:w-[54%] relative flex-col bg-mesh noise overflow-hidden">
-        {/* Grid pattern */}
         <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
 
         {/* Floating orbs */}
@@ -60,7 +88,6 @@ export default function LoginPage() {
             style={{ background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)", animation: "float 6s ease-in-out infinite 1.5s" }} />
         </div>
 
-        {/* Content */}
         <div className="relative z-10 flex flex-col h-full p-12">
           {/* Logo */}
           <div className="flex items-center gap-3 animate-fade-in-down">
@@ -74,9 +101,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Hero */}
           <div className="flex-1 flex flex-col justify-center animate-fade-in-up" style={{ animationDelay: ".1s" }}>
-            {/* Live badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7 w-fit"
               style={{ background: "rgba(91,95,239,.18)", border: "1px solid rgba(91,95,239,.35)" }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -96,7 +121,6 @@ export default function LoginPage() {
               ویدیوی آواتار سخنگو بسازید — مثل D-ID و HeyGen
             </p>
 
-            {/* Features */}
             <div className="grid grid-cols-2 gap-3">
               {features.map(({ icon, title, desc }, i) => (
                 <div key={title}
@@ -115,15 +139,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="text-white/20 text-xs animate-fade-in" style={{ animationDelay: ".6s" }}>
-            © 2024 Avatar Platform · پلتفرم آواتار هوش مصنوعی
-          </p>
+          <p className="text-white/20 text-xs">© 2024 Avatar Platform · پلتفرم آواتار هوش مصنوعی</p>
         </div>
       </div>
 
-      {/* ─── Right: Form ─── */}
+      {/* ─── Right: Form Panel ─── */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Subtle bg pattern */}
         <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
 
         {/* Mobile logo */}
@@ -135,11 +156,35 @@ export default function LoginPage() {
           <h1 className="text-2xl font-black text-foreground">Avatar Platform</h1>
         </div>
 
-        <div className="relative z-10 w-full max-w-[400px] animate-fade-in-up" style={{ animationDelay: ".05s" }}>
+        <div className="relative z-10 w-full max-w-[400px]">
+
+          {/* Mode toggle tabs */}
+          <div className="flex bg-surface rounded-xl p-1 mb-7 border border-border">
+            {(["login", "register"] as const).map((m) => (
+              <button key={m}
+                onClick={() => switchMode(m)}
+                className={cn(
+                  "flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200",
+                  mode === m
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {m === "login" ? "ورود" : "ثبت‌نام"}
+              </button>
+            ))}
+          </div>
+
           {/* Header */}
-          <div className="mb-7">
-            <h2 className="text-2xl font-black text-foreground">خوش آمدید</h2>
-            <p className="text-muted-foreground mt-1.5 text-sm">وارد حساب کاربری خود شوید</p>
+          <div className="mb-6">
+            <h2 className="text-2xl font-black text-foreground">
+              {mode === "login" ? "خوش آمدید" : "حساب جدید"}
+            </h2>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              {mode === "login"
+                ? "وارد حساب کاربری خود شوید"
+                : "در چند ثانیه ثبت‌نام کنید و شروع کنید"}
+            </p>
           </div>
 
           {/* Error */}
@@ -153,69 +198,131 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" dir="rtl">
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-semibold text-foreground">ایمیل</label>
-              <input
-                type="email"
-                autoComplete="email"
-                {...register("email")}
-                className={cn("input-field text-left", errors.email && "border-red-500")}
-                placeholder="you@example.com"
-                dir="ltr"
-              />
-              {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-semibold text-foreground">رمز عبور</label>
-                <a href="#" className="text-xs text-primary hover:text-primary/80 transition-colors">فراموشی رمز</a>
+          {/* ── Login Form ── */}
+          {mode === "login" && (
+            <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4" dir="rtl">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-foreground">ایمیل</label>
+                <div className="relative">
+                  <Mail size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input type="email" autoComplete="email"
+                    {...loginForm.register("email")}
+                    className={cn("input-field text-left pr-10", loginForm.formState.errors.email && "border-red-500")}
+                    placeholder="you@example.com" dir="ltr" />
+                </div>
+                {loginForm.formState.errors.email && (
+                  <p className="text-xs text-red-500">{loginForm.formState.errors.email.message}</p>
+                )}
               </div>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  autoComplete="current-password"
-                  {...register("password")}
-                  className={cn("input-field ps-11", errors.password && "border-red-500")}
-                  placeholder="••••••••"
-                  dir="ltr"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute inset-y-0 start-0 flex items-center ps-3.5 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-semibold text-foreground">رمز عبور</label>
+                  <button type="button" className="text-xs text-primary hover:text-primary/80 transition-colors">فراموشی رمز</button>
+                </div>
+                <div className="relative">
+                  <Lock size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    type={showPw ? "text" : "password"}
+                    autoComplete="current-password"
+                    {...loginForm.register("password")}
+                    className={cn("input-field ps-11 pr-10", loginForm.formState.errors.password && "border-red-500")}
+                    placeholder="••••••••" dir="ltr" />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute inset-y-0 start-0 flex items-center ps-3.5 text-muted-foreground hover:text-foreground transition-colors">
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {loginForm.formState.errors.password && (
+                  <p className="text-xs text-red-500">{loginForm.formState.errors.password.message}</p>
+                )}
+              </div>
+
+              <button type="submit" disabled={loginForm.formState.isSubmitting} className="btn-primary w-full py-3 text-base mt-2">
+                {loginForm.formState.isSubmitting
+                  ? <><Loader2 size={16} className="animate-spin" /> در حال ورود…</>
+                  : "ورود به حساب"}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground pt-1">
+                حساب ندارید؟{" "}
+                <button type="button" onClick={() => switchMode("register")}
+                  className="text-primary font-bold hover:text-primary/80 transition-colors">
+                  ثبت‌نام کنید
                 </button>
+              </p>
+            </form>
+          )}
+
+          {/* ── Register Form ── */}
+          {mode === "register" && (
+            <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4" dir="rtl">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-foreground">نام کامل</label>
+                <div className="relative">
+                  <User size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input type="text" autoComplete="name"
+                    {...registerForm.register("full_name")}
+                    className={cn("input-field pr-10", registerForm.formState.errors.full_name && "border-red-500")}
+                    placeholder="نام و نام خانوادگی" />
+                </div>
+                {registerForm.formState.errors.full_name && (
+                  <p className="text-xs text-red-500">{registerForm.formState.errors.full_name.message}</p>
+                )}
               </div>
-              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-            </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary w-full py-3 text-base mt-2"
-            >
-              {isSubmitting
-                ? <><Loader2 size={16} className="animate-spin" /> در حال ورود…</>
-                : "ورود به حساب"}
-            </button>
-          </form>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-foreground">ایمیل</label>
+                <div className="relative">
+                  <Mail size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input type="email" autoComplete="email"
+                    {...registerForm.register("email")}
+                    className={cn("input-field text-left pr-10", registerForm.formState.errors.email && "border-red-500")}
+                    placeholder="you@example.com" dir="ltr" />
+                </div>
+                {registerForm.formState.errors.email && (
+                  <p className="text-xs text-red-500">{registerForm.formState.errors.email.message}</p>
+                )}
+              </div>
 
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">یا</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-foreground">رمز عبور</label>
+                <div className="relative">
+                  <Lock size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <input
+                    type={showPw ? "text" : "password"}
+                    autoComplete="new-password"
+                    {...registerForm.register("password")}
+                    className={cn("input-field ps-11 pr-10", registerForm.formState.errors.password && "border-red-500")}
+                    placeholder="حداقل ۸ کاراکتر" dir="ltr" />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute inset-y-0 start-0 flex items-center ps-3.5 text-muted-foreground hover:text-foreground transition-colors">
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {registerForm.formState.errors.password && (
+                  <p className="text-xs text-red-500">{registerForm.formState.errors.password.message}</p>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  باید شامل حرف بزرگ، عدد و کاراکتر خاص باشد
+                </p>
+              </div>
 
-          <p className="text-center text-sm text-muted-foreground">
-            حساب ندارید؟{" "}
-            <a href="#" className="text-primary font-bold hover:text-primary/80 transition-colors">ثبت‌نام کنید</a>
-          </p>
+              <button type="submit" disabled={registerForm.formState.isSubmitting} className="btn-primary w-full py-3 text-base mt-2">
+                {registerForm.formState.isSubmitting
+                  ? <><Loader2 size={16} className="animate-spin" /> در حال ثبت‌نام…</>
+                  : "ایجاد حساب رایگان"}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground pt-1">
+                قبلاً ثبت‌نام کرده‌اید؟{" "}
+                <button type="button" onClick={() => switchMode("login")}
+                  className="text-primary font-bold hover:text-primary/80 transition-colors">
+                  وارد شوید
+                </button>
+              </p>
+            </form>
+          )}
 
           {/* Trust badges */}
           <div className="flex items-center justify-center gap-4 mt-8">

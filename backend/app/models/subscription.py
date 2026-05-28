@@ -82,12 +82,12 @@ class Subscription(UUIDBase):
 
     # ------------------------------------------------------------------ plan / status
     plan: Mapped[SubscriptionPlan] = mapped_column(
-        Enum(SubscriptionPlan, name="subscription_plan_enum"),
+        Enum(SubscriptionPlan, name="subscription_plan_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         comment="Subscription tier",
     )
     status: Mapped[SubscriptionStatus] = mapped_column(
-        Enum(SubscriptionStatus, name="subscription_status_enum"),
+        Enum(SubscriptionStatus, name="subscription_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=SubscriptionStatus.ACTIVE,
         server_default=text("'active'"),

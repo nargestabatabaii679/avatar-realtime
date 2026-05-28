@@ -125,7 +125,7 @@ class Video(UUIDBase):
         comment="ISO 639-1 language code for TTS synthesis",
     )
     resolution: Mapped[VideoResolution] = mapped_column(
-        Enum(VideoResolution, name="video_resolution_enum"),
+        Enum(VideoResolution, name="video_resolution_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=VideoResolution.R_1080P,
         server_default=text("'1080p'"),
@@ -163,7 +163,7 @@ class Video(UUIDBase):
 
     # ------------------------------------------------------------------ status / job tracking
     status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus, name="video_status_enum"),
+        Enum(VideoStatus, name="video_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=VideoStatus.QUEUED,
         server_default=text("'queued'"),

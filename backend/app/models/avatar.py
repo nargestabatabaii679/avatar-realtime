@@ -94,7 +94,7 @@ class Avatar(UUIDBase):
 
     # ------------------------------------------------------------------ source media
     source_type: Mapped[AvatarSourceType] = mapped_column(
-        Enum(AvatarSourceType, name="avatar_source_type_enum"),
+        Enum(AvatarSourceType, name="avatar_source_type_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         comment="How the avatar was created",
     )
@@ -123,7 +123,7 @@ class Avatar(UUIDBase):
 
     # ------------------------------------------------------------------ status
     status: Mapped[AvatarStatus] = mapped_column(
-        Enum(AvatarStatus, name="avatar_status_enum"),
+        Enum(AvatarStatus, name="avatar_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=AvatarStatus.PROCESSING,
         server_default=text("'processing'"),

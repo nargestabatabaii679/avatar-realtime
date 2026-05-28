@@ -96,7 +96,7 @@ class Conversation(UUIDBase):
 
     # ------------------------------------------------------------------ channel
     channel: Mapped[ConversationChannel] = mapped_column(
-        Enum(ConversationChannel, name="conversation_channel_enum"),
+        Enum(ConversationChannel, name="conversation_channel_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=ConversationChannel.WEB,
         server_default=text("'web'"),

@@ -84,7 +84,7 @@ class Agent(UUIDBase):
         comment="Short description of the agent's role and purpose",
     )
     role: Mapped[AgentRole] = mapped_column(
-        Enum(AgentRole, name="agent_role_enum"),
+        Enum(AgentRole, name="agent_role_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=AgentRole.GENERAL,
         server_default=text("'general'"),

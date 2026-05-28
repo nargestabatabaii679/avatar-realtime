@@ -125,7 +125,7 @@ class KnowledgeBase(UUIDBase):
 
     # ------------------------------------------------------------------ status
     status: Mapped[KnowledgeBaseStatus] = mapped_column(
-        Enum(KnowledgeBaseStatus, name="knowledge_base_status_enum"),
+        Enum(KnowledgeBaseStatus, name="knowledge_base_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=KnowledgeBaseStatus.EMPTY,
         server_default=text("'empty'"),

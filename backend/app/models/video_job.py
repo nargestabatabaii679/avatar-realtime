@@ -87,7 +87,7 @@ class VideoJob(UUIDBase):
 
     # ------------------------------------------------------------------ job identity
     job_type: Mapped[JobType] = mapped_column(
-        Enum(JobType, name="job_type_enum"),
+        Enum(JobType, name="job_type_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         comment="Which stage of the pipeline this record tracks",
     )
@@ -100,7 +100,7 @@ class VideoJob(UUIDBase):
 
     # ------------------------------------------------------------------ status / progress
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus, name="job_status_enum"),
+        Enum(JobStatus, name="job_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=JobStatus.PENDING,
         server_default=text("'pending'"),

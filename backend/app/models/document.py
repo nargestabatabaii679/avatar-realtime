@@ -103,7 +103,7 @@ class Document(UUIDBase):
 
     # ------------------------------------------------------------------ file type & location
     file_type: Mapped[DocumentFileType] = mapped_column(
-        Enum(DocumentFileType, name="document_file_type_enum"),
+        Enum(DocumentFileType, name="document_file_type_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         comment="Content type / document category",
     )
@@ -120,7 +120,7 @@ class Document(UUIDBase):
 
     # ------------------------------------------------------------------ indexing status
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus, name="document_status_enum"),
+        Enum(DocumentStatus, name="document_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=DocumentStatus.PENDING,
         server_default=text("'pending'"),

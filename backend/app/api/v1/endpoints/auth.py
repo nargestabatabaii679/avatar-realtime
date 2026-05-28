@@ -47,9 +47,10 @@ router = APIRouter()
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    username: str = Field(..., min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
+    username: str | None = Field(None, min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
     password: str = Field(..., min_length=8)
     full_name: str | None = Field(None, max_length=255)
+    organization_name: str | None = Field(None, max_length=255)
 
     @field_validator("password")
     @classmethod
@@ -224,33 +225,53 @@ async def _invalidate_tokens(user_id: uuid.UUID) -> None:
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=UserResponse,
+    response_model=TokenResponse,
     summary="Register a new user account",
 )
 async def register(
     payload: RegisterRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> TokenResponse:
     """
-    Create a new user account.
+    Create a new user account and immediately return JWT tokens.
 
+    - Auto-generates username from email if not provided
     - Validates password strength
     - Checks for duplicate email / username
     - Stores bcrypt-hashed password
     - Dispatches email-verification email asynchronously
+    - Returns access + refresh tokens so the user is logged in immediately
     """
-    # Check uniqueness
-    existing = await db.execute(
-        select(User).where(
-            (User.email == payload.email) | (User.username == payload.username),
-            User.is_deleted.is_(False),
+    # Auto-generate username from email prefix if not provided
+    if not payload.username:
+        base = payload.email.split("@")[0].lower()
+        # Strip non-alphanumeric chars except _ and -
+        import re as _re
+        base = _re.sub(r"[^a-z0-9_-]", "_", base)[:30]
+        payload.username = base
+
+    # Ensure username uniqueness by appending a short suffix if needed
+    candidate = payload.username
+    suffix = 0
+    while True:
+        existing_username = await db.execute(
+            select(User).where(User.username == candidate, User.is_deleted.is_(False))
         )
+        if not existing_username.scalar_one_or_none():
+            break
+        suffix += 1
+        candidate = f"{payload.username}_{suffix}"
+    payload.username = candidate
+
+    # Check email uniqueness
+    existing_email = await db.execute(
+        select(User).where(User.email == payload.email, User.is_deleted.is_(False))
     )
-    if existing.scalar_one_or_none():
+    if existing_email.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A user with this email or username already exists",
+            detail="A user with this email already exists",
         )
 
     user = User(
@@ -273,7 +294,7 @@ async def register(
     background_tasks.add_task(_send_verification_email, user.email, verification_token)
 
     logger.info("user_registered", user_id=str(user.id), email=user.email)
-    return user
+    return _build_token_response(user)
 
 
 @router.post(

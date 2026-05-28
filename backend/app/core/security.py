@@ -572,3 +572,43 @@ def validate_password_strength(password: str) -> list[str]:
     if not any(c in "!@#$%^&*()_+-=[]{}|;':\",./<>?" for c in password):
         errors.append("Password must contain at least one special character")
     return errors
+
+
+# ---------------------------------------------------------------------------
+# User dependency
+# ---------------------------------------------------------------------------
+
+async def get_current_user(
+    token_data: TokenData = Depends(get_current_token_data),
+) -> Any:
+    """
+    FastAPI dependency: parses Bearer token and fetches the active User from DB.
+    Raises HTTP 401 if the token is invalid or the user is not found/inactive.
+
+    Note: DB session is injected lazily to avoid circular imports at module load.
+    Endpoints that also need ``db`` should declare it separately via Depends(get_db).
+    """
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from app.core.database import AsyncSessionLocal
+    from app.models.user import User
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(User).where(User.id == token_data.user_id)
+        )
+        user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
