@@ -1,13 +1,6 @@
 import { create } from 'zustand'
 import type { NotificationItem } from '@/types'
-
-interface ToastNotification {
-  id: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  title: string
-  message?: string
-  duration?: number
-}
+import type { ToastNotification } from '@/types/ui'
 
 interface NotificationState {
   toasts: ToastNotification[]

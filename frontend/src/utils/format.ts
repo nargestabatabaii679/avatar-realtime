@@ -123,6 +123,17 @@ export function formatETA(seconds: number): string {
   return `${Math.round(seconds / 3600)}h remaining`
 }
 
+/**
+ * Returns a compact elapsed-time string (e.g. "5s", "12m", "3h").
+ * Used in notification timestamps.
+ */
+export function timeAgo(iso: string): string {
+  const diffSec = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diffSec < 60)   return `${Math.round(diffSec)}s`;
+  if (diffSec < 3600) return `${Math.round(diffSec / 60)}m`;
+  return `${Math.round(diffSec / 3600)}h`;
+}
+
 // Script word count
 export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length

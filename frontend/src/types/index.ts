@@ -284,6 +284,9 @@ export interface VoiceModel {
   created_at: string
   updated_at: string
   metadata?: VoiceMetadata
+  // API response extras
+  tts_engine?: string
+  progress?: number
 }
 
 export interface VoiceMetadata {

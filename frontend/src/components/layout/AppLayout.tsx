@@ -8,48 +8,62 @@ import { useAuthStore } from "../../stores/authStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { wsService } from "../../services/websocket";
 import { cn } from "../../utils/cn";
+import { STATUS_COLORS, RTL_LANGS } from "../../constants";
+import type { ToastNotification } from "../../types/ui";
+import type { WSJobProgressEvent } from "../../types";
+import { JobStatus } from "../../types";
+import { useTranslation } from "react-i18next";
 
-/* ─── Toast Item ─────────────────────────────────────────── */
+// ── Toast icons / border colours keyed by type ────────────────
 const TOAST_ICONS = {
   success: CheckCircle2,
   error:   XCircle,
   warning: AlertTriangle,
   info:    Info,
-};
-const TOAST_STYLES = {
-  success: { border: "border-emerald-500/30", bg: "bg-emerald-500/10", icon: "text-emerald-500" },
-  error:   { border: "border-red-500/30",     bg: "bg-red-500/10",     icon: "text-red-500" },
-  warning: { border: "border-amber-500/30",   bg: "bg-amber-500/10",   icon: "text-amber-500" },
-  info:    { border: "border-primary/30",     bg: "bg-primary/10",     icon: "text-primary" },
-};
+} as const;
 
-function ToastItem({ toast, onDismiss }: { toast: any; onDismiss: () => void }) {
-  const Icon  = TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS];
-  const style = TOAST_STYLES[toast.type as keyof typeof TOAST_STYLES];
+// ── Single toast item ─────────────────────────────────────────
+function ToastItem({ toast, onDismiss }: { toast: ToastNotification; onDismiss: () => void }) {
+  const Icon      = TOAST_ICONS[toast.type];
+  const colorKey  = toast.type === "error" ? "error" : toast.type === "warning" ? "warning" : toast.type === "success" ? "success" : "info";
+  const textColor = STATUS_COLORS[colorKey].text;
+  const bgClass   = STATUS_COLORS[colorKey].bg;
+
   return (
     <div className={cn(
       "flex items-start gap-3 p-3.5 rounded-xl border shadow-lg backdrop-blur-xl max-w-xs w-full animate-notify-in",
-      "bg-card/95", style.border
-    )}>
-      <Icon size={16} className={cn("shrink-0 mt-0.5", style.icon)} />
+      bgClass,
+    )} style={{ borderColor: `hsl(var(--border))`, backgroundColor: "hsl(var(--card) / 0.95)" }}>
+      <Icon size={16} className={cn("shrink-0 mt-0.5", textColor)} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground leading-tight">{toast.title}</p>
-        {toast.message && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{toast.message}</p>}
+        <p className="text-sm font-semibold leading-tight" style={{ color: "hsl(var(--foreground))" }}>
+          {toast.title}
+        </p>
+        {toast.message && (
+          <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
+            {toast.message}
+          </p>
+        )}
       </div>
-      <button onClick={onDismiss} className="p-0.5 rounded hover:bg-accent text-muted-foreground shrink-0">
+      <button
+        onClick={onDismiss}
+        className="p-0.5 rounded hover:bg-accent transition-colors shrink-0"
+        style={{ color: "hsl(var(--muted-foreground))" }}
+      >
         <X size={13} />
       </button>
     </div>
   );
 }
 
-/* ─── Toast Container ────────────────────────────────────── */
+// ── Toast stack (top-right) ───────────────────────────────────
 function ToastContainer() {
   const { toasts, removeToast } = useNotificationStore();
   if (!toasts.length) return null;
+
   return (
     <div className="fixed top-20 end-4 z-[100] flex flex-col gap-2 pointer-events-none">
-      {toasts.map(t => (
+      {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastItem toast={t} onDismiss={() => removeToast(t.id)} />
         </div>
@@ -58,38 +72,35 @@ function ToastContainer() {
   );
 }
 
-/* ─── Main Layout ────────────────────────────────────────── */
+// ── Root layout ───────────────────────────────────────────────
 export default function AppLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { language } = useThemeStore();
-  const { tokens } = useAuthStore();
-  const { addNotification, success } = useNotificationStore();
-  const isRTL = ["fa", "ar", "he"].includes(language);
+  const [sidebarCollapsed,   setSidebarCollapsed]   = useState(false);
+  const [mobileSidebarOpen,  setMobileSidebarOpen]  = useState(false);
 
-  /* Connect WebSocket when authenticated */
+  const { language }                    = useThemeStore();
+  const { tokens }                      = useAuthStore();
+  const { addNotification, success }    = useNotificationStore();
+  const { t }                           = useTranslation();
+  const isRTL = RTL_LANGS.includes(language);
+
+  // Connect WebSocket when authenticated; clean up on logout / token change
   useEffect(() => {
     if (!tokens?.access_token) return;
     wsService.connect(tokens.access_token);
 
-    const unsubJobs = wsService.subscribeToAllJobs((event) => {
-      if (event.status === "completed") {
-        const titles: Record<string, string> = {
-          avatar:  "آواتار آماده شد",
-          voice:   "صدا کلون شد",
-          video:   "ویدیو آماده است",
-        };
-        const title = titles[event.job_type] ?? "کار تمام شد";
-        success(title, event.message);
-        addNotification({ type: "success", title, message: event.message });
-      }
+    const unsubJobs = wsService.subscribeToAllJobs((event: WSJobProgressEvent) => {
+      if (event.status !== JobStatus.COMPLETED) return;
+      const title   = t("notifications.jobDone");
+      const message = event.current_step ?? undefined;
+      success(title, message);
+      addNotification({ type: "success", title, message });
     });
 
     return () => {
       unsubJobs();
       wsService.disconnect();
     };
-  }, [tokens?.access_token]);
+  }, [tokens?.access_token, t]);
 
   return (
     <div
@@ -105,16 +116,16 @@ export default function AppLayout() {
       )}
 
       {/* Sidebar */}
-      <div
-        className={cn(
-          "fixed inset-y-0 z-50 transition-transform duration-300 md:relative md:translate-x-0",
-          isRTL ? "right-0" : "left-0",
-          mobileSidebarOpen ? "translate-x-0" : isRTL ? "translate-x-full md:translate-x-0" : "-translate-x-full md:translate-x-0"
-        )}
-      >
+      <div className={cn(
+        "fixed inset-y-0 z-50 transition-transform duration-300 md:relative md:translate-x-0",
+        isRTL ? "right-0" : "left-0",
+        mobileSidebarOpen
+          ? "translate-x-0"
+          : isRTL ? "translate-x-full md:translate-x-0" : "-translate-x-full md:translate-x-0",
+      )}>
         <Sidebar
           collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           onClose={() => setMobileSidebarOpen(false)}
         />
       </div>
@@ -127,7 +138,6 @@ export default function AppLayout() {
         </main>
       </div>
 
-      {/* Global toasts */}
       <ToastContainer />
     </div>
   );
