@@ -13,7 +13,7 @@ const PERIODS = [
   { value: "365d", label: "1 Year" },
 ];
 
-const COLORS = ["#6366f1", "#8b5cf6", "#14b8a6", "#f97316", "#ec4899", "#84cc16"];
+const COLORS = ["#00C8F0", "#00E87A", "#F0A500", "#E05050", "#00C8F0", "#00E87A"];
 
 function KPICard({ icon: Icon, label, value, sub, color }: {
   icon: React.ElementType; label: string; value: string | number; sub?: string; color: string;
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
                   labelStyle={{ color: "hsl(var(--foreground))" }}
                 />
-                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill="#00C8F0" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

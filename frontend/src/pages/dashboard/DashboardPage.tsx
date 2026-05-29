@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   Users, Mic, Video, Bot, TrendingUp, TrendingDown,
   HardDrive, Cpu, Plus, ArrowRight, Activity, Zap,
-  Clock, CheckCircle2, AlertCircle, Loader2, Sparkles, BarChart3, Globe2,
+  Clock, CheckCircle2, AlertCircle, Loader2, BarChart3, Globe2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api }                    from "../../services/api";
@@ -13,7 +13,7 @@ import { useNotificationStore }   from "../../stores/notificationStore";
 import { wsService }              from "../../services/websocket";
 import { useCountUp }             from "../../hooks/useCountUp";
 import { cn }                     from "../../utils/cn";
-import { GRADIENTS, TIMING }      from "../../constants";
+import { TIMING }                 from "../../constants";
 import type { NotificationItem, WSJobProgressEvent } from "../../types";
 
 // ── Greeting helper ───────────────────────────────────────────
@@ -36,7 +36,7 @@ function LiveClock() {
 
   const locale = i18n.language === "fa" ? "fa-IR" : i18n.language;
   return (
-    <span className="tabular-nums font-mono text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+    <span className="tabular-nums font-mono text-xs" style={{ color: "var(--t2)" }}>
       {time.toLocaleTimeString(locale)}
     </span>
   );
@@ -48,21 +48,20 @@ interface StatCardProps {
   label: string;
   value: number;
   trend?: number;
-  gradient: string;
   delay?: number;
   trendLabel?: string;
 }
 
-function StatCard({ icon: Icon, label, value, trend, gradient, delay = 0, trendLabel }: StatCardProps) {
+function StatCard({ icon: Icon, label, value, trend, delay = 0, trendLabel }: StatCardProps) {
   const animated = useCountUp(value, TIMING.countUpMs, delay * 1000);
   return (
     <div className="stat-card animate-fade-in-up" style={{ animationDelay: `${delay}s` }}>
-      <div className="stat-icon" style={{ background: gradient }}>
+      <div className="stat-icon">
         <Icon size={19} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-muted-foreground font-medium">{label}</p>
-        <p className="text-2xl font-bold mt-0.5" style={{ color: "hsl(var(--foreground))" }}>
+        <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--t1)" }}>
           {animated}
         </p>
         {trend !== undefined && (
@@ -83,37 +82,28 @@ interface ActionCardProps {
   label: string;
   description: string;
   onClick: () => void;
-  gradient: string;
   delay?: number;
   ctaLabel: string;
 }
 
-function ActionCard({ icon: Icon, label, description, onClick, gradient, delay = 0, ctaLabel }: ActionCardProps) {
+function ActionCard({ icon: Icon, label, description, onClick, delay = 0, ctaLabel }: ActionCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group relative rounded-2xl p-5 text-start overflow-hidden transition-all duration-300 hover:-translate-y-1 animate-fade-in-up border"
-      style={{
-        animationDelay:  `${delay}s`,
-        backgroundColor: "hsl(var(--card))",
-        borderColor:     "hsl(var(--border))",
-        boxShadow:       "var(--shadow-sm)",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-lg)")}
-      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-sm)")}
+      className="group card-premium p-5 text-start animate-fade-in-up w-full transition-all duration-150"
+      style={{ animationDelay: `${delay}s` }}
     >
-      <div className="relative z-10">
-        <div
-          className="inline-flex p-3 rounded-xl mb-4 text-white group-hover:scale-110 transition-transform duration-200"
-          style={{ background: gradient }}
-        >
-          <Icon size={20} />
-        </div>
-        <h3 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>{label}</h3>
-        <p className="text-xs mt-1 leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>{description}</p>
-        <div className="flex items-center gap-1 mt-3 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-          {ctaLabel} <ArrowRight size={11} className="rtl:rotate-180" />
-        </div>
+      <div
+        className="inline-flex p-2.5 mb-4 transition-colors duration-150"
+        style={{ background: "var(--s3)", borderRadius: "var(--r-tag)", color: "var(--accent)" }}
+      >
+        <Icon size={18} />
+      </div>
+      <h3 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>{label}</h3>
+      <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--t2)" }}>{description}</p>
+      <div className="flex items-center gap-1 mt-3 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ color: "var(--accent)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.06em" }}>
+        {ctaLabel} <ArrowRight size={11} className="rtl:rotate-180" />
       </div>
     </button>
   );
@@ -129,27 +119,27 @@ interface GpuBarProps {
 }
 
 function GpuBar({ name, util, vramUsedMb, vramTotalMb, tempC }: GpuBarProps) {
-  const barColor = util > 90 ? "#ef4444" : util > 70 ? "#f59e0b" : "#6366f1";
+  const barColor = util > 90 ? "var(--red)" : util > 70 ? "var(--amber)" : "var(--accent)";
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium truncate max-w-[130px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+        <span className="font-medium truncate max-w-[130px]" style={{ color: "var(--t2)" }}>
           {name}
         </span>
         <div className="flex items-center gap-2">
-          <span className="font-bold tabular-nums" style={{ color: barColor }}>{util}%</span>
-          <span style={{ color: "hsl(var(--muted-foreground))" }}>{tempC}°C</span>
+          <span className="font-bold tabular-nums" style={{ color: barColor, fontFamily: "'IBM Plex Mono', monospace" }}>{util}%</span>
+          <span style={{ color: "var(--t3)" }}>{tempC}°C</span>
         </div>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(var(--muted))" }}>
+      <div className="progress-bar">
         <div
-          className="h-full rounded-full transition-all duration-700"
+          className="progress-fill transition-all duration-700"
           style={{ width: `${util}%`, background: barColor }}
         />
       </div>
-      <div className="flex justify-between text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+      <div className="flex justify-between text-[10px]" style={{ color: "var(--t2)" }}>
         <span>VRAM {(vramUsedMb / 1024).toFixed(1)}GB / {(vramTotalMb / 1024).toFixed(1)}GB</span>
-        <Activity size={10} className="text-emerald-500" />
+        <Activity size={10} style={{ color: "var(--green)" }} />
       </div>
     </div>
   );
@@ -169,9 +159,9 @@ function ActivityItem({ entry }: { entry: ActivityEntry }) {
   const Icon = JOB_ICONS[entry.jobType] ?? Activity;
 
   const statusColor =
-    entry.status === "completed"  ? "text-emerald-500" :
-    entry.status === "failed"     ? "text-red-500"     :
-    entry.status === "processing" ? "text-amber-500"   : "text-blue-400";
+    entry.status === "completed"  ? "var(--green)" :
+    entry.status === "failed"     ? "var(--red)"   :
+    entry.status === "processing" ? "var(--amber)"  : "var(--accent)";
 
   const StatusIcon =
     entry.status === "completed"  ? CheckCircle2 :
@@ -180,25 +170,26 @@ function ActivityItem({ entry }: { entry: ActivityEntry }) {
   return (
     <div
       className="flex items-start gap-3 py-2.5 border-b last:border-0"
-      style={{ borderColor: "hsl(var(--border))" }}
+      style={{ borderColor: "var(--border-rest)" }}
     >
       <div
-        className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
-        style={{ backgroundColor: "hsl(var(--muted))" }}
+        className="w-7 h-7 shrink-0 flex items-center justify-center"
+        style={{ background: "var(--s3)", borderRadius: "var(--r-tag)" }}
       >
-        <Icon size={13} style={{ color: "hsl(var(--muted-foreground))" }} />
+        <Icon size={13} style={{ color: "var(--t3)" }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate" style={{ color: "hsl(var(--foreground))" }}>
+        <p className="text-xs font-medium truncate" style={{ color: "var(--t1)" }}>
           {entry.message}
         </p>
-        <p className="text-[10px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+        <p className="text-[10px] mt-0.5" style={{ color: "var(--t3)" }}>
           {entry.time}
         </p>
       </div>
       <StatusIcon
         size={13}
-        className={cn("shrink-0 mt-0.5", statusColor, entry.status === "processing" && "animate-spin")}
+        className={cn("shrink-0 mt-0.5", entry.status === "processing" && "animate-spin")}
+        style={{ color: statusColor }}
       />
     </div>
   );
@@ -290,38 +281,28 @@ export default function DashboardPage() {
 
       {/* Welcome banner */}
       <div
-        className="relative rounded-2xl overflow-hidden animate-fade-in-down p-6"
-        style={{ background: GRADIENTS.primary, boxShadow: "var(--shadow-lg)" }}
+        className="card-premium animate-fade-in-down p-6"
+        style={{ borderColor: "var(--accent-md)" }}
       >
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{ backgroundImage: "radial-gradient(circle at 70% 50%, white 0%, transparent 60%)" }}
-        />
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-white/70 text-sm font-medium flex items-center gap-2">
+            <p className="text-sm font-medium flex items-center gap-2" style={{ color: "var(--t2)" }}>
               <LiveClock />
               <span>·</span>
               <span>{greeting}،</span>
             </p>
-            <h1 className="text-2xl font-bold text-white mt-1">
-              {firstName} <span className="opacity-80">✨</span>
+            <h1 className="text-2xl font-bold mt-1" style={{ color: "var(--t1)" }}>
+              {firstName}
             </h1>
-            <p className="text-white/70 text-sm mt-1">{t("dashboard.platformReady")}</p>
+            <p className="text-sm mt-1" style={{ color: "var(--t2)" }}>{t("dashboard.platformReady")}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/video-studio")}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-primary rounded-xl text-sm font-semibold shadow-lg hover:bg-white/90 transition-colors"
-            >
-              <Sparkles size={15} />
+            <button onClick={() => navigate("/video-studio")} className="btn-primary">
+              <Plus size={14} />
               {t("dashboard.newVideo")}
             </button>
-            <button
-              onClick={() => navigate("/realtime")}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/20 text-white rounded-xl text-sm font-semibold hover:bg-white/30 transition-colors border border-white/20"
-            >
-              <Globe2 size={15} />
+            <button onClick={() => navigate("/realtime")} className="btn-secondary">
+              <Globe2 size={14} />
               {t("dashboard.liveConversation")}
             </button>
           </div>
@@ -330,21 +311,18 @@ export default function DashboardPage() {
 
       {/* Stat grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Video}  label={t("dashboard.videoStats")}  value={videos}  trend={12} gradient={GRADIENTS.indigo}  delay={0}    trendLabel={t("common.thisMonth")} />
-        <StatCard icon={Users}  label={t("dashboard.avatarStats")} value={avatars}            gradient={GRADIENTS.violet}  delay={0.05} />
-        <StatCard icon={Mic}    label={t("dashboard.voiceStats")}  value={voices}             gradient={GRADIENTS.cyan}    delay={0.10} />
-        <StatCard icon={Bot}    label={t("dashboard.agentStats")}  value={agents}  trend={5}  gradient={GRADIENTS.teal}    delay={0.15} trendLabel={t("common.thisMonth")} />
+        <StatCard icon={Video}  label={t("dashboard.videoStats")}  value={videos}  trend={12} delay={0}    trendLabel={t("common.thisMonth")} />
+        <StatCard icon={Users}  label={t("dashboard.avatarStats")} value={avatars}            delay={0.05} />
+        <StatCard icon={Mic}    label={t("dashboard.voiceStats")}  value={voices}             delay={0.10} />
+        <StatCard icon={Bot}    label={t("dashboard.agentStats")}  value={agents}  trend={5}  delay={0.15} trendLabel={t("common.thisMonth")} />
       </div>
 
       {/* Active jobs banner */}
       {(activeJobs?.items?.length ?? 0) > 0 && (
-        <div
-          className="rounded-2xl p-4 border animate-fade-in"
-          style={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-        >
+        <div className="card-premium p-4 animate-fade-in" style={{ borderColor: "rgba(240,165,0,0.2)" }}>
           <div className="flex items-center gap-2 mb-3">
-            <Loader2 size={14} className="text-amber-500 animate-spin" />
-            <span className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+            <Loader2 size={14} style={{ color: "var(--amber)" }} className="animate-spin" />
+            <span className="text-sm font-semibold" style={{ color: "var(--t1)" }}>
               {t("dashboard.activeJobs")} ({activeJobs.items.length})
             </span>
           </div>
@@ -352,14 +330,10 @@ export default function DashboardPage() {
             {activeJobs.items.map((job: { id: string; job_type: string; progress?: number }) => (
               <div
                 key={job.id}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border"
-                style={{
-                  backgroundColor: "hsl(var(--muted))",
-                  borderColor:     "hsl(var(--border))",
-                  color:           "hsl(var(--foreground))",
-                }}
+                className="badge"
+                style={{ background: "rgba(240,165,0,0.08)", color: "var(--amber)", border: "0.5px solid rgba(240,165,0,0.2)" }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="status-dot pending" />
                 {t(`dashboard.jobType${job.job_type.charAt(0).toUpperCase()}${job.job_type.slice(1)}`, { defaultValue: job.job_type })} · {job.progress ?? 0}%
               </div>
             ))}
@@ -369,14 +343,12 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <section>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: "hsl(var(--foreground))" }}>
-          {t("dashboard.quickActions")}
-        </h2>
+        <h2 className="section-label mb-4">{t("dashboard.quickActions")}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <ActionCard icon={Users} label={t("dashboard.createAvatar")}   description={t("avatar.noAvatars")}   onClick={() => navigate("/avatar-studio")}    gradient={GRADIENTS.indigo} delay={0}    ctaLabel={t("common.getStarted")} />
-          <ActionCard icon={Mic}   label={t("dashboard.cloneVoice")}     description={t("voice.noVoicesHint")} onClick={() => navigate("/voice-studio")}     gradient={GRADIENTS.purple} delay={0.05} ctaLabel={t("common.getStarted")} />
-          <ActionCard icon={Video} label={t("dashboard.generateVideo")}  description={t("video.noVideos")}     onClick={() => navigate("/video-studio")}     gradient={GRADIENTS.cyan}   delay={0.10} ctaLabel={t("common.getStarted")} />
-          <ActionCard icon={Bot}   label={t("dashboard.createAgent")}    description={t("agent.noAgents")}     onClick={() => navigate("/agent-builder")}    gradient={GRADIENTS.teal}   delay={0.15} ctaLabel={t("common.getStarted")} />
+          <ActionCard icon={Users} label={t("dashboard.createAvatar")}  description={t("avatar.noAvatars")}   onClick={() => navigate("/avatar-studio")} delay={0}    ctaLabel={t("common.getStarted")} />
+          <ActionCard icon={Mic}   label={t("dashboard.cloneVoice")}    description={t("voice.noVoicesHint")} onClick={() => navigate("/voice-studio")}  delay={0.05} ctaLabel={t("common.getStarted")} />
+          <ActionCard icon={Video} label={t("dashboard.generateVideo")} description={t("video.noVideos")}     onClick={() => navigate("/video-studio")}  delay={0.10} ctaLabel={t("common.getStarted")} />
+          <ActionCard icon={Bot}   label={t("dashboard.createAgent")}   description={t("agent.noAgents")}     onClick={() => navigate("/agent-builder")} delay={0.15} ctaLabel={t("common.getStarted")} />
         </div>
       </section>
 
@@ -385,21 +357,22 @@ export default function DashboardPage() {
 
         {/* Recent videos */}
         <div
-          className="lg:col-span-2 rounded-2xl p-5 border animate-fade-in-up"
-          style={{ animationDelay: ".2s", backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
+          className="lg:col-span-2 card-premium p-5 animate-fade-in-up"
+          style={{ animationDelay: ".2s" }}
         >
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>
+              <h2 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>
                 {t("dashboard.recentVideos")}
               </h2>
-              <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <p className="text-xs mt-0.5" style={{ color: "var(--t2)" }}>
                 {t("dashboard.recentVideosSubtitle")}
               </p>
             </div>
             <button
               onClick={() => navigate("/video-studio")}
-              className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-xs font-medium transition-colors"
+              style={{ color: "var(--accent)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.05em" }}
             >
               {t("common.viewAll")} <ArrowRight size={11} className="rtl:rotate-180" />
             </button>
@@ -408,18 +381,18 @@ export default function DashboardPage() {
           {!recentVideos?.items?.length ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
-                style={{ backgroundColor: "hsl(var(--muted))" }}
+                className="w-12 h-12 flex items-center justify-center mb-3"
+                style={{ background: "var(--s3)", borderRadius: "var(--r-card)" }}
               >
-                <Video size={24} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.4 }} />
+                <Video size={20} style={{ color: "var(--t3)", opacity: 0.6 }} />
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: "hsl(var(--foreground))" }}>
+              <p className="text-sm font-medium mb-1" style={{ color: "var(--t1)" }}>
                 {t("dashboard.noVideos")}
               </p>
-              <p className="text-xs mb-4" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <p className="text-xs mb-4" style={{ color: "var(--t2)" }}>
                 {t("dashboard.noVideosHint")}
               </p>
-              <button onClick={() => navigate("/video-studio")} className="btn-primary text-xs px-4 py-2">
+              <button onClick={() => navigate("/video-studio")} className="btn-primary">
                 <Plus size={13} /> {t("dashboard.createVideo")}
               </button>
             </div>
@@ -428,20 +401,19 @@ export default function DashboardPage() {
               {recentVideos.items.map((video: { id: string; title?: string; thumbnail_url?: string }) => (
                 <div
                   key={video.id}
-                  className="group relative rounded-xl overflow-hidden aspect-video cursor-pointer ring-1 transition-all hover:shadow-md"
-                  style={{ backgroundColor: "hsl(var(--muted))" }}
+                  className="group relative overflow-hidden aspect-video cursor-pointer transition-all"
+                  style={{ background: "var(--s3)", borderRadius: "var(--r-card)", border: "0.5px solid var(--border-rest)" }}
                 >
                   {video.thumbnail_url ? (
                     <img src={video.thumbnail_url} alt={video.title ?? ""} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Video size={20} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.4 }} />
+                      <Video size={18} style={{ color: "var(--t3)", opacity: 0.5 }} />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-2 start-2 end-2">
-                      <p className="text-white text-xs font-medium truncate">{video.title || t("common.noData")}</p>
-                    </div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2"
+                    style={{ background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)" }}>
+                    <p className="text-white text-[11px] font-medium truncate w-full">{video.title || t("common.noData")}</p>
                   </div>
                 </div>
               ))}
@@ -453,23 +425,23 @@ export default function DashboardPage() {
         <div className="space-y-4">
           {/* GPU */}
           <div
-            className="rounded-2xl p-5 border animate-fade-in-up"
-            style={{ animationDelay: ".25s", backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
+            className="card-premium p-5 animate-fade-in-up"
+            style={{ animationDelay: ".25s" }}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: GRADIENTS.indigo }}>
-                  <Cpu size={13} className="text-white" />
+                <div className="w-7 h-7 flex items-center justify-center" style={{ background: "var(--s3)", borderRadius: "var(--r-tag)", color: "var(--accent)" }}>
+                  <Cpu size={13} />
                 </div>
-                <h3 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>
+                <h3 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>
                   {t("dashboard.gpuStatus")}
                 </h3>
               </div>
               <span
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                className="badge"
                 style={gpuStats?.available
-                  ? { background: "rgb(16 185 129 / 0.12)", color: "#10b981" }
-                  : { background: "rgb(239 68 68 / 0.12)",  color: "#ef4444" }}
+                  ? { background: "rgba(0,232,122,0.08)", color: "var(--green)", border: "0.5px solid rgba(0,232,122,0.2)" }
+                  : { background: "rgba(224,80,80,0.08)",  color: "var(--red)",   border: "0.5px solid rgba(224,80,80,0.2)" }}
               >
                 {gpuStats?.available ? t("dashboard.gpuOnline") : t("dashboard.gpuOffline")}
               </span>
@@ -489,15 +461,15 @@ export default function DashboardPage() {
                     />
                   ))}
                 {gpuUpdated && (
-                  <p className="text-[10px] text-right" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <p className="text-[10px] text-right" style={{ color: "var(--t3)", fontFamily: "'IBM Plex Mono', monospace" }}>
                     {t("dashboard.gpuUpdated")}: {gpuUpdated}
                   </p>
                 )}
               </div>
             ) : (
               <div className="flex items-center gap-2 py-2">
-                <Zap size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
-                <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                <Zap size={14} style={{ color: "var(--t3)" }} />
+                <p className="text-sm" style={{ color: "var(--t3)" }}>
                   {t("dashboard.gpuNoDetected")}
                 </p>
               </div>
@@ -506,22 +478,22 @@ export default function DashboardPage() {
 
           {/* Storage */}
           <div
-            className="rounded-2xl p-5 border animate-fade-in-up"
-            style={{ animationDelay: ".3s", backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
+            className="card-premium p-5 animate-fade-in-up"
+            style={{ animationDelay: ".3s" }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: GRADIENTS.amber }}>
-                <HardDrive size={13} className="text-white" />
+              <div className="w-7 h-7 flex items-center justify-center" style={{ background: "var(--s3)", borderRadius: "var(--r-tag)", color: "var(--amber)" }}>
+                <HardDrive size={13} />
               </div>
-              <h3 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>
+              <h3 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>
                 {t("dashboard.storageUsage")}
               </h3>
             </div>
             <div className="space-y-3">
               {([
-                { labelKey: "dashboard.storageVideos",  gb: dashStats?.videos?.total_size_gb,  color: "#6366f1" },
-                { labelKey: "dashboard.storageVoices",  gb: dashStats?.voices?.total_size_gb,  color: "#a855f7" },
-                { labelKey: "dashboard.storageAvatars", gb: dashStats?.avatars?.total_size_gb, color: "#06b6d4" },
+                { labelKey: "dashboard.storageVideos",  gb: dashStats?.videos?.total_size_gb,  color: "var(--accent)" },
+                { labelKey: "dashboard.storageVoices",  gb: dashStats?.voices?.total_size_gb,  color: "var(--green)"  },
+                { labelKey: "dashboard.storageAvatars", gb: dashStats?.avatars?.total_size_gb, color: "var(--amber)"  },
               ] as const).map(({ labelKey, gb, color }) => {
                 const gbVal = (gb as number | undefined) ?? 0;
                 const pct   = Math.min((gbVal / 100) * 100, 100);
@@ -529,13 +501,13 @@ export default function DashboardPage() {
                   <div key={labelKey}>
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: color }} />
-                        <span style={{ color: "hsl(var(--muted-foreground))" }}>{t(labelKey)}</span>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                        <span style={{ color: "var(--t2)" }}>{t(labelKey)}</span>
                       </div>
-                      <span className="font-semibold" style={{ color: "hsl(var(--foreground))" }}>{gbVal} GB</span>
+                      <span className="font-semibold" style={{ color: "var(--t1)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "11px" }}>{gbVal} GB</span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(var(--muted))" }}>
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+                    <div className="progress-bar">
+                      <div className="progress-fill transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
                     </div>
                   </div>
                 );
@@ -549,32 +521,26 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Live activity */}
-        <div
-          className="rounded-2xl p-5 border animate-fade-in-up"
-          style={{ animationDelay: ".35s", backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-        >
+        <div className="card-premium p-5 animate-fade-in-up" style={{ animationDelay: ".35s" }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: GRADIENTS.teal }}>
-                <Activity size={13} className="text-white" />
+              <div className="w-7 h-7 flex items-center justify-center" style={{ background: "var(--s3)", borderRadius: "var(--r-tag)", color: "var(--green)" }}>
+                <Activity size={13} />
               </div>
-              <h3 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>
+              <h3 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>
                 {t("dashboard.liveActivity")}
               </h3>
             </div>
-            <span
-              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
-              style={{ background: "rgb(16 185 129 / 0.12)", color: "#10b981" }}
-            >
-              <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="badge" style={{ background: "rgba(0,232,122,0.08)", color: "var(--green)", border: "0.5px solid rgba(0,232,122,0.2)" }}>
+              <span className="status-dot live" />
               LIVE
             </span>
           </div>
 
           {displayActivities.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <Activity size={24} style={{ color: "hsl(var(--muted-foreground))", opacity: 0.3 }} />
-              <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <Activity size={24} style={{ color: "var(--t3)", opacity: 0.5 }} />
+              <p className="text-xs" style={{ color: "var(--t3)" }}>
                 {t("dashboard.waitingForEvents")}
               </p>
             </div>
@@ -584,24 +550,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Performance summary */}
-        <div
-          className="rounded-2xl p-5 border animate-fade-in-up"
-          style={{ animationDelay: ".4s", backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-        >
+        <div className="card-premium p-5 animate-fade-in-up" style={{ animationDelay: ".4s" }}>
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: GRADIENTS.cyan }}>
-              <BarChart3 size={13} className="text-white" />
+            <div className="w-7 h-7 flex items-center justify-center" style={{ background: "var(--s3)", borderRadius: "var(--r-tag)", color: "var(--accent)" }}>
+              <BarChart3 size={13} />
             </div>
-            <h3 className="font-semibold text-sm" style={{ color: "hsl(var(--foreground))" }}>
+            <h3 className="font-semibold text-sm" style={{ color: "var(--t1)" }}>
               {t("dashboard.performanceSummary")}
             </h3>
           </div>
           <div className="space-y-3">
             {([
-              { labelKey: "dashboard.successfulVideos", value: dashStats?.videos?.completed,  total: dashStats?.videos?.total,  color: "#6366f1" },
-              { labelKey: "dashboard.readyAvatars",     value: dashStats?.avatars?.ready,     total: dashStats?.avatars?.total, color: "#8b5cf6" },
-              { labelKey: "dashboard.readyVoiceModels", value: dashStats?.voices?.ready,      total: dashStats?.voices?.total,  color: "#06b6d4" },
-              { labelKey: "dashboard.activeAgents",     value: dashStats?.agents?.active,     total: dashStats?.agents?.total,  color: "#10b981" },
+              { labelKey: "dashboard.successfulVideos", value: dashStats?.videos?.completed,  total: dashStats?.videos?.total,  color: "var(--accent)" },
+              { labelKey: "dashboard.readyAvatars",     value: dashStats?.avatars?.ready,     total: dashStats?.avatars?.total, color: "var(--accent)" },
+              { labelKey: "dashboard.readyVoiceModels", value: dashStats?.voices?.ready,      total: dashStats?.voices?.total,  color: "var(--green)"  },
+              { labelKey: "dashboard.activeAgents",     value: dashStats?.agents?.active,     total: dashStats?.agents?.total,  color: "var(--green)"  },
             ] as const).map(({ labelKey, value, total, color }) => {
               const v   = (value as number | undefined) ?? 0;
               const tot = (total as number | undefined) ?? 1;
@@ -609,13 +572,13 @@ export default function DashboardPage() {
               return (
                 <div key={labelKey}>
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span style={{ color: "hsl(var(--muted-foreground))" }}>{t(labelKey)}</span>
-                    <span className="font-semibold tabular-nums" style={{ color: "hsl(var(--foreground))" }}>
+                    <span style={{ color: "var(--t2)" }}>{t(labelKey)}</span>
+                    <span className="font-semibold tabular-nums" style={{ color: "var(--t1)", fontFamily: "'IBM Plex Mono', monospace", fontSize: "11px" }}>
                       {v} / {tot}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(var(--muted))" }}>
-                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, background: color }} />
+                  <div className="progress-bar">
+                    <div className="progress-fill transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
                   </div>
                 </div>
               );
@@ -623,15 +586,16 @@ export default function DashboardPage() {
           </div>
           <div
             className="mt-4 pt-4 border-t flex items-center justify-between"
-            style={{ borderColor: "hsl(var(--border))" }}
+            style={{ borderColor: "var(--border-rest)" }}
           >
             <button
               onClick={() => navigate("/analytics")}
-              className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-xs font-medium transition-colors"
+              style={{ color: "var(--accent)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.05em" }}
             >
               {t("dashboard.viewFullAnalytics")} <ArrowRight size={11} className="rtl:rotate-180" />
             </button>
-            <div className="flex items-center gap-1 text-[10px]" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--t3)" }}>
               <Clock size={10} />
               {t("dashboard.last30Days")}
             </div>

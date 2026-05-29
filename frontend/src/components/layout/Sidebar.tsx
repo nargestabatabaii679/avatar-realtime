@@ -16,17 +16,17 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { path: "/dashboard",       icon: LayoutDashboard, labelKey: "nav.dashboard",      color: "#6366f1" },
-  { path: "/avatar-studio",   icon: Users,           labelKey: "nav.avatarStudio",    color: "#8b5cf6" },
-  { path: "/voice-studio",    icon: Mic,             labelKey: "nav.voiceStudio",     color: "#a855f7" },
-  { path: "/video-studio",    icon: Video,           labelKey: "nav.videoStudio",     color: "#06b6d4" },
-  { path: "/storyboard",      icon: LayoutTemplate,  labelKey: "nav.storyboard",      color: "#f59e0b" },
-  { path: "/agent-builder",   icon: Bot,             labelKey: "nav.agentBuilder",    color: "#10b981" },
-  { path: "/knowledge-center",icon: BookOpen,        labelKey: "nav.knowledgeCenter", color: "#0891b2" },
-  { path: "/analytics",       icon: BarChart3,       labelKey: "nav.analytics",       color: "#ec4899" },
-  { path: "/integrations",    icon: Plug2,           labelKey: "nav.integrations",    color: "#06b6d4" },
-  { path: "/realtime",        icon: Radio,           labelKey: "nav.realtime",        color: "#ef4444" },
-  { path: "/admin",           icon: Settings,        labelKey: "nav.admin",           color: "#64748b", adminOnly: true },
+  { path: "/dashboard",        icon: LayoutDashboard, labelKey: "nav.dashboard"      },
+  { path: "/avatar-studio",    icon: Users,           labelKey: "nav.avatarStudio"   },
+  { path: "/voice-studio",     icon: Mic,             labelKey: "nav.voiceStudio"    },
+  { path: "/video-studio",     icon: Video,           labelKey: "nav.videoStudio"    },
+  { path: "/storyboard",       icon: LayoutTemplate,  labelKey: "nav.storyboard"     },
+  { path: "/agent-builder",    icon: Bot,             labelKey: "nav.agentBuilder"   },
+  { path: "/knowledge-center", icon: BookOpen,        labelKey: "nav.knowledgeCenter"},
+  { path: "/analytics",        icon: BarChart3,       labelKey: "nav.analytics"      },
+  { path: "/integrations",     icon: Plug2,           labelKey: "nav.integrations"   },
+  { path: "/realtime",         icon: Radio,           labelKey: "nav.realtime"       },
+  { path: "/admin",            icon: Settings,        labelKey: "nav.admin",          adminOnly: true },
 ] as const;
 
 export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) {
@@ -52,9 +52,9 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
       )}>
         {!collapsed && (
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
-              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary)" }}>
-              <span className="text-white font-black text-sm">A</span>
+            <div className="w-8 h-8 rounded flex-shrink-0 flex items-center justify-center"
+              style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)" }}>
+              <span className="font-black text-sm" style={{ color: "var(--accent)" }}>A</span>
             </div>
             <div className="overflow-hidden">
               <p className="font-bold text-foreground text-sm truncate leading-none">Avatar</p>
@@ -63,9 +63,9 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary)" }}>
-            <span className="text-white font-black text-sm">A</span>
+          <div className="w-8 h-8 rounded flex items-center justify-center"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)" }}>
+            <span className="font-black text-sm" style={{ color: "var(--accent)" }}>A</span>
           </div>
         )}
         <div className="flex items-center gap-1">
@@ -107,23 +107,19 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
               to={item.path}
               title={collapsed ? t(item.labelKey) : undefined}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative",
-                isActive
-                  ? "text-white shadow-md"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-150 group relative nav-item",
+                isActive ? "active" : "",
                 collapsed && "justify-center px-0"
               )}
-              style={isActive ? { background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary)" } : {}}
             >
               {/* Active indicator for collapsed */}
               {isActive && collapsed && (
-                <span className="absolute -end-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full bg-primary" />
+                <span className="absolute -end-0 top-1/2 -translate-y-1/2 w-0.5 h-5" style={{ background: "var(--accent)" }} />
               )}
 
               <Icon
                 size={17}
-                className={cn("shrink-0 transition-transform", !isActive && "group-hover:scale-110")}
-                style={!isActive ? { color: item.color } : {}}
+                className="shrink-0"
               />
               {!collapsed && (
                 <span className="truncate">{t(item.labelKey)}</span>
@@ -148,8 +144,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
       <div className={cn("border-t border-border p-3", collapsed && "flex justify-center")}>
         {!collapsed && user ? (
           <div className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
-              style={{ background: "var(--gradient-primary)" }}>
+            <div className="w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold"
+              style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", color: "var(--accent)" }}>
               {user.full_name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -158,7 +154,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
             </div>
             <button
               onClick={logout}
-              className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
+              className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0"
               title="Sign out"
             >
               <LogOut size={14} />
@@ -167,8 +163,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onClose }: SidebarProps) 
         ) : collapsed && user ? (
           <button
             onClick={logout}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold hover:ring-2 hover:ring-red-500/50 transition-all"
-            style={{ background: "var(--gradient-primary)" }}
+            className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold transition-all"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", color: "var(--accent)" }}
             title={user.full_name || user.email}
           >
             {user.full_name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}

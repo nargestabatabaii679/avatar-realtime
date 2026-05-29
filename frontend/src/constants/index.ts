@@ -21,51 +21,34 @@ export const LANGUAGES: Language[] = [
 
 export const RTL_LANGS = LANGUAGES.filter((l) => l.dir === "rtl").map((l) => l.code);
 
-// ── Route → accent color (matches Sidebar) ────────────────────
+// ── Route → accent color (single design-system accent) ────────
 export const ROUTE_COLORS: Record<string, string> = {
-  "/dashboard":        "#6366f1",
-  "/avatar-studio":    "#8b5cf6",
-  "/voice-studio":     "#a855f7",
-  "/video-studio":     "#06b6d4",
-  "/storyboard":       "#f59e0b",
-  "/agent-builder":    "#10b981",
-  "/knowledge-center": "#0891b2",
-  "/analytics":        "#ec4899",
-  "/integrations":     "#06b6d4",
-  "/realtime":         "#ef4444",
-  "/admin":            "#64748b",
+  "/dashboard":        "#00C8F0",
+  "/avatar-studio":    "#00C8F0",
+  "/voice-studio":     "#00C8F0",
+  "/video-studio":     "#00C8F0",
+  "/storyboard":       "#00C8F0",
+  "/agent-builder":    "#00C8F0",
+  "/knowledge-center": "#00C8F0",
+  "/analytics":        "#00C8F0",
+  "/integrations":     "#00C8F0",
+  "/realtime":         "#00C8F0",
+  "/admin":            "#00C8F0",
 };
-
-// ── Semantic gradient presets ──────────────────────────────────
-export const GRADIENTS = {
-  primary:   "var(--gradient-primary)",
-  secondary: "var(--gradient-secondary)",
-  danger:    "var(--gradient-danger)",
-  warning:   "var(--gradient-warning)",
-  // Named brand palettes (used for avatar/voice/video/agent)
-  indigo:    "linear-gradient(135deg,#6366f1,#8b5cf6)",
-  violet:    "linear-gradient(135deg,#8b5cf6,#a855f7)",
-  purple:    "linear-gradient(135deg,#a855f7,#7c3aed)",
-  cyan:      "linear-gradient(135deg,#06b6d4,#0284c7)",
-  teal:      "linear-gradient(135deg,#10b981,#0d9488)",
-  amber:     "linear-gradient(135deg,#f59e0b,#d97706)",
-  red:       "linear-gradient(135deg,#ef4444,#dc2626)",
-  voiceCard: "linear-gradient(135deg,#8b5cf6,#06b6d4)",
-} as const;
 
 // ── Semantic status colors ─────────────────────────────────────
 export const STATUS_COLORS = {
-  success:    { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",                hex: "#10b981" },
-  error:      { text: "text-red-500",     bg: "bg-red-500/10",     dot: "bg-red-500",                   hex: "#ef4444" },
-  warning:    { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#f59e0b" },
-  info:       { text: "text-primary",     bg: "bg-primary/10",     dot: "bg-primary animate-pulse",     hex: "#6366f1" },
-  processing: { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#f59e0b" },
-  ready:      { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",               hex: "#10b981" },
-  failed:     { text: "text-red-500",     bg: "bg-red-500/10",     dot: "bg-red-500",                   hex: "#ef4444" },
-  pending:    { text: "text-blue-400",    bg: "bg-blue-400/10",    dot: "bg-blue-400 animate-pulse",    hex: "#60a5fa" },
-  cloning:    { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#f59e0b" },
-  training:   { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#f59e0b" },
-  completed:  { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",               hex: "#10b981" },
+  success:    { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",               hex: "#00E87A" },
+  error:      { text: "text-red-500",     bg: "bg-red-500/10",     dot: "bg-red-500",                   hex: "#E05050" },
+  warning:    { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#F0A500" },
+  info:       { text: "text-primary",     bg: "bg-primary/10",     dot: "bg-primary animate-pulse",     hex: "#00C8F0" },
+  processing: { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#F0A500" },
+  ready:      { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",               hex: "#00E87A" },
+  failed:     { text: "text-red-500",     bg: "bg-red-500/10",     dot: "bg-red-500",                   hex: "#E05050" },
+  pending:    { text: "text-primary",     bg: "bg-primary/10",     dot: "bg-primary animate-pulse",     hex: "#00C8F0" },
+  cloning:    { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#F0A500" },
+  training:   { text: "text-amber-500",   bg: "bg-amber-500/10",   dot: "bg-amber-500 animate-pulse",   hex: "#F0A500" },
+  completed:  { text: "text-emerald-500", bg: "bg-emerald-500/10", dot: "bg-emerald-500",               hex: "#00E87A" },
 } as const;
 
 export type StatusKey = keyof typeof STATUS_COLORS;

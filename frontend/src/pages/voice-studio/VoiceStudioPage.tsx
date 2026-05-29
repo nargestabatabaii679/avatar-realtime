@@ -4,12 +4,12 @@ import { useDropzone } from "react-dropzone";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Mic, Play, StopCircle, Trash2, Upload, CheckCircle2,
-  Loader2, Plus, X, Volume2, Radio, Sparkles,
+  Loader2, Plus, X, Volume2, Radio,
 } from "lucide-react";
 import { api }               from "../../services/api";
 import { cn }                from "../../utils/cn";
 import { formatDuration }    from "../../utils/format";
-import { LANGUAGES, GRADIENTS, TIMING } from "../../constants";
+import { LANGUAGES, TIMING } from "../../constants";
 import { useAudioRecorder }  from "../../hooks/useAudioRecorder";
 import { Modal }             from "../../components/ui/Modal";
 import { StatusBadge }       from "../../components/ui/StatusBadge";
@@ -24,14 +24,13 @@ function WaveformBars({ active, values }: { active: boolean; values: number[] })
       {values.map((v, i) => (
         <div
           key={i}
-          className="rounded-full transition-all"
+          className="transition-all"
           style={{
-            width:      3,
-            height:     active ? `${Math.max(4, v * 40)}px` : "4px",
-            background: active
-              ? `hsl(${262 + i * 3}, 80%, 65%)`
-              : "hsl(var(--muted-foreground) / 0.3)",
+            width:      2,
+            height:     active ? `${Math.max(3, v * 36)}px` : "3px",
+            background: active ? "var(--accent)" : "var(--b2)",
             transitionDuration: "80ms",
+            borderRadius: 1,
           }}
         />
       ))}
@@ -57,32 +56,29 @@ function VoiceCard({ voice, onDelete, onTest }: VoiceCardProps) {
   const statusLabelKey = `voice.status.${voice.status}` as const;
 
   return (
-    <div
-      className="rounded-2xl p-5 border transition-all hover:shadow-md group"
-      style={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-    >
+    <div className="card-premium p-5 group transition-all duration-150">
       {/* Header row */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-11 h-11 rounded-full flex items-center justify-center text-white text-base font-bold shrink-0"
-            style={{ background: GRADIENTS.voiceCard }}
+            className="w-10 h-10 flex items-center justify-center text-sm font-bold shrink-0"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", borderRadius: "var(--r-tag)", color: "var(--accent)" }}
           >
             {initials}
           </div>
           <div>
-            <h3 className="font-semibold text-sm leading-tight" style={{ color: "hsl(var(--foreground))" }}>
+            <h3 className="font-semibold text-sm leading-tight" style={{ color: "var(--t1)" }}>
               {voice.name}
             </h3>
-            <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--t3)" }}>
               {langFlag} {voice.language?.toUpperCase()} · {voice.tts_engine}
             </p>
           </div>
         </div>
         <button
           onClick={onDelete}
-          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
-          style={{ color: "hsl(var(--muted-foreground))" }}
+          className="p-1.5 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
+          style={{ color: "var(--t3)", borderRadius: "var(--r-btn)" }}
           aria-label={t("common.delete")}
         >
           <Trash2 size={14} />
@@ -96,7 +92,7 @@ function VoiceCard({ voice, onDelete, onTest }: VoiceCardProps) {
       {/* Test voice */}
       {voice.status === VoiceStatus.READY && (
         <div className="space-y-2">
-          <p className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <p className="text-xs font-medium" style={{ color: "var(--t3)" }}>
             {t("voice.testVoice")}
           </p>
           <div className="flex gap-2">
@@ -105,21 +101,15 @@ function VoiceCard({ voice, onDelete, onTest }: VoiceCardProps) {
               onChange={(e) => setTestText(e.target.value)}
               placeholder={t("voice.enterTestText")}
               onKeyDown={(e) => e.key === "Enter" && testText.trim() && onTest(testText)}
-              className="flex-1 px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-              style={{
-                backgroundColor: "hsl(var(--muted))",
-                borderColor:     "hsl(var(--border))",
-                color:           "hsl(var(--foreground))",
-              }}
+              className="input-field flex-1"
             />
             <button
               onClick={() => testText.trim() && onTest(testText)}
               disabled={!testText.trim()}
-              className="p-2 rounded-xl transition-colors disabled:opacity-40"
-              style={{ background: GRADIENTS.primary }}
+              className="btn-primary px-3"
               aria-label={t("voice.synthesize")}
             >
-              <Play size={13} className="text-white" />
+              <Play size={13} />
             </button>
           </div>
         </div>
@@ -129,17 +119,17 @@ function VoiceCard({ voice, onDelete, onTest }: VoiceCardProps) {
       {voice.status === VoiceStatus.TRAINING && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span style={{ color: "hsl(var(--muted-foreground))" }}>
+            <span style={{ color: "var(--t3)" }}>
               {t("voice.status.training_model")}
             </span>
-            <span className="font-medium" style={{ color: "hsl(var(--foreground))" }}>
+            <span className="font-medium" style={{ color: "var(--t1)", fontFamily: "'IBM Plex Mono', monospace" }}>
               {voice.progress ?? 0}%
             </span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(var(--muted))" }}>
+          <div className="progress-bar">
             <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${voice.progress ?? 30}%`, background: GRADIENTS.primary }}
+              className="progress-fill transition-all duration-500"
+              style={{ width: `${voice.progress ?? 30}%` }}
             />
           </div>
         </div>
@@ -202,25 +192,20 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
       <div className="space-y-4">
         {/* Name */}
         <div>
-          <label className="block text-xs font-semibold mb-1.5" style={{ color: "hsl(var(--foreground))" }}>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--t1)" }}>
             {t("voice.cloneModal.modelName")}
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("voice.cloneModal.modelNamePlaceholder")}
-            className="w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-            style={{
-              backgroundColor: "hsl(var(--muted))",
-              borderColor:     "hsl(var(--border))",
-              color:           "hsl(var(--foreground))",
-            }}
+            className="input-field"
           />
         </div>
 
         {/* Language grid */}
         <div>
-          <label className="block text-xs font-semibold mb-2" style={{ color: "hsl(var(--foreground))" }}>
+          <label className="block text-xs font-semibold mb-2" style={{ color: "var(--t1)" }}>
             {t("voice.language")}
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -228,11 +213,12 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
               <button
                 key={l.code}
                 onClick={() => setLanguage(l.code)}
-                className={cn("flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all")}
+                className={cn("flex items-center gap-2 px-3 py-2 text-xs font-medium transition-all")}
                 style={{
-                  backgroundColor: language === l.code ? "hsl(var(--primary) / 0.08)" : "hsl(var(--muted))",
-                  borderColor:     language === l.code ? "hsl(var(--primary) / 0.5)"  : "hsl(var(--border))",
-                  color:           language === l.code ? "hsl(var(--primary))"         : "hsl(var(--foreground))",
+                  background:   language === l.code ? "var(--accent-bg)" : "var(--s2)",
+                  border:       language === l.code ? "0.5px solid var(--accent-md)" : "0.5px solid var(--border-rest)",
+                  borderRadius: "var(--r-btn)",
+                  color:        language === l.code ? "var(--accent)" : "var(--t2)",
                 }}
               >
                 <span className="text-base">{l.flag}</span>
@@ -243,7 +229,7 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
         </div>
 
         {/* Upload / Record toggle */}
-        <div className="flex rounded-xl p-1 gap-1" style={{ backgroundColor: "hsl(var(--muted))" }}>
+        <div className="flex gap-1" style={{ borderBottom: "0.5px solid var(--border-rest)" }}>
           {([
             { mode: "upload", label: t("voice.cloneModal.uploadTab"), Icon: Upload },
             { mode: "record", label: t("voice.cloneModal.recordTab"), Icon: Mic    },
@@ -251,14 +237,15 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
             <button
               key={mode}
               onClick={() => setInputMode(mode)}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 py-2 px-3 text-xs font-medium transition-all"
               style={{
-                backgroundColor: inputMode === mode ? "hsl(var(--background))" : "transparent",
-                color:           inputMode === mode ? "hsl(var(--foreground))"  : "hsl(var(--muted-foreground))",
-                boxShadow:       inputMode === mode ? "var(--shadow-sm)"        : "none",
+                color:        inputMode === mode ? "var(--accent)"  : "var(--t3)",
+                borderBottom: inputMode === mode ? "1px solid var(--accent)" : "1px solid transparent",
+                fontFamily:   "'IBM Plex Mono', monospace",
+                letterSpacing: "0.05em",
               }}
             >
-              <Icon size={13} />
+              <Icon size={12} />
               {label}
             </button>
           ))}
@@ -269,18 +256,14 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
           <div>
             <div
               {...getRootProps()}
-              className={cn(
-                "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all",
-                isDragActive ? "border-primary bg-primary/5" : "hover:border-primary/40",
-              )}
-              style={{ borderColor: isDragActive ? "hsl(var(--primary))" : "hsl(var(--border))" }}
+              className={cn("drop-zone p-6 text-center cursor-pointer", isDragActive && "drop-zone-active")}
             >
               <input {...getInputProps()} />
-              <Upload size={28} className="mx-auto mb-2" style={{ color: "hsl(var(--muted-foreground))", opacity: 0.5 }} />
-              <p className="text-sm font-medium" style={{ color: "hsl(var(--foreground))" }}>
+              <Upload size={24} className="mx-auto mb-2" style={{ color: "var(--t3)", opacity: 0.6 }} />
+              <p className="text-sm font-medium" style={{ color: "var(--t1)" }}>
                 {isDragActive ? t("voice.cloneModal.dropHint") : t("voice.uploadSamples")}
               </p>
-              <p className="text-xs mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <p className="text-xs mt-1" style={{ color: "var(--t3)" }}>
                 {t("voice.cloneModal.uploadHint")}
               </p>
             </div>
@@ -289,16 +272,16 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
                 {uploadFiles.map((f, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                    style={{ backgroundColor: "hsl(var(--muted))" }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs"
+                    style={{ background: "var(--s2)", borderRadius: "var(--r-btn)" }}
                   >
-                    <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
-                    <span className="flex-1 truncate" style={{ color: "hsl(var(--foreground))" }}>{f.name}</span>
-                    <span style={{ color: "hsl(var(--muted-foreground))" }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
+                    <CheckCircle2 size={12} style={{ color: "var(--green)" }} className="shrink-0" />
+                    <span className="flex-1 truncate" style={{ color: "var(--t1)" }}>{f.name}</span>
+                    <span style={{ color: "var(--t3)", fontFamily: "'IBM Plex Mono', monospace" }}>{(f.size / 1024 / 1024).toFixed(1)}MB</span>
                     <button
                       onClick={() => setUploadFiles((p) => p.filter((_, j) => j !== i))}
                       className="hover:text-red-500 transition-colors"
-                      style={{ color: "hsl(var(--muted-foreground))" }}
+                      style={{ color: "var(--t3)" }}
                       aria-label={t("common.delete")}
                     >
                       <X size={11} />
@@ -313,59 +296,58 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
         {/* Mic recorder */}
         {inputMode === "record" && (
           <div
-            className="rounded-2xl p-5 border text-center space-y-4"
-            style={{ backgroundColor: "hsl(var(--muted))", borderColor: "hsl(var(--border))" }}
+            className="p-5 text-center space-y-4"
+            style={{ background: "var(--s2)", borderRadius: "var(--r-card)", border: "0.5px solid var(--border-rest)" }}
           >
             <WaveformBars active={recorder.recording} values={recorder.waveValues} />
 
             <div
-              className="flex items-center justify-center gap-1 text-sm font-mono tabular-nums"
-              style={{ color: recorder.recording ? "#ef4444" : "hsl(var(--muted-foreground))" }}
+              className="flex items-center justify-center gap-1 text-sm tabular-nums"
+              style={{ color: recorder.recording ? "var(--red)" : "var(--t3)", fontFamily: "'IBM Plex Mono', monospace" }}
             >
-              {recorder.recording && <Radio size={13} className="animate-pulse text-red-500" />}
+              {recorder.recording && <Radio size={13} className="animate-pulse" style={{ color: "var(--red)" }} />}
               {formatDuration(recorder.durationSec)}
             </div>
 
             {!recorder.recording && !recorder.audioBlob ? (
               <button
                 onClick={recorder.start}
-                className="mx-auto flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-105"
-                style={{ background: GRADIENTS.primary }}
+                className="btn-primary mx-auto"
               >
-                <Mic size={16} />
+                <Mic size={14} />
                 {t("voice.cloneModal.startRecording")}
               </button>
             ) : recorder.recording ? (
               <button
                 onClick={recorder.stop}
-                className="mx-auto flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-105"
-                style={{ background: GRADIENTS.red }}
+                className="mx-auto inline-flex items-center gap-2"
+                style={{
+                  padding: "9px 16px",
+                  borderRadius: "var(--r-btn)",
+                  border: "0.5px solid var(--red)",
+                  background: "rgba(224,80,80,0.08)",
+                  color: "var(--red)",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: "12px",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
               >
-                <StopCircle size={16} />
+                <StopCircle size={14} />
                 {t("voice.cloneModal.stopRecording")}
               </button>
             ) : (
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => { const url = URL.createObjectURL(recorder.audioBlob!); new Audio(url).play(); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors"
-                  style={{
-                    backgroundColor: "hsl(var(--background))",
-                    borderColor:     "hsl(var(--border))",
-                    color:           "hsl(var(--foreground))",
-                  }}
+                  className="btn-secondary"
                 >
                   <Play size={13} />
                   {t("voice.cloneModal.playRecording")}
                 </button>
                 <button
                   onClick={recorder.clear}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors hover:text-red-500"
-                  style={{
-                    backgroundColor: "hsl(var(--background))",
-                    borderColor:     "hsl(var(--border))",
-                    color:           "hsl(var(--muted-foreground))",
-                  }}
+                  className="btn-ghost hover:text-red-500"
                 >
                   <Trash2 size={13} />
                   {t("voice.cloneModal.deleteRecording")}
@@ -374,7 +356,7 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
             )}
 
             {recorder.audioBlob && (
-              <p className="text-xs text-emerald-500 flex items-center justify-center gap-1">
+              <p className="text-xs flex items-center justify-center gap-1" style={{ color: "var(--green)" }}>
                 <CheckCircle2 size={12} />
                 {t("voice.cloneModal.recordingReady")} ({formatDuration(recorder.durationSec)})
               </p>
@@ -384,22 +366,17 @@ function CloneModal({ open, onClose, onSubmit, isPending }: CloneModalProps) {
 
         {/* Action buttons */}
         <div className="flex gap-3 pt-1">
-          <button
-            onClick={handleClose}
-            className="flex-1 py-2.5 rounded-xl text-sm border transition-colors hover:bg-accent"
-            style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
-          >
+          <button onClick={handleClose} className="btn-secondary flex-1">
             {t("common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: GRADIENTS.primary }}
+            className="btn-primary flex-1"
           >
             {isPending
               ? <><Loader2 size={14} className="animate-spin" /> {t("voice.cloneModal.submitting")}</>
-              : <><Sparkles size={14} /> {t("voice.cloneModal.startClone")}</>
+              : <><Mic size={14} /> {t("voice.cloneModal.startClone")}</>
             }
           </button>
         </div>
@@ -473,21 +450,17 @@ export default function VoiceStudioPage() {
       {voices.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {([
-            { labelKey: "voice.totalModels",   value: voices.length,    Icon: Volume2,    color: "#8b5cf6" },
-            { labelKey: "voice.status.ready",   value: readyCount,       Icon: CheckCircle2, color: "#10b981" },
-            { labelKey: "voice.processing",     value: processingCount,  Icon: Loader2,    color: "#f59e0b" },
-          ] as const).map(({ labelKey, value, Icon, color }) => (
-            <div
-              key={labelKey}
-              className="rounded-2xl p-4 border flex items-center gap-3"
-              style={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
-            >
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${color}22` }}>
-                <Icon size={14} style={{ color }} className={labelKey === "voice.processing" && processingCount > 0 ? "animate-spin" : ""} />
+            { labelKey: "voice.totalModels",  value: voices.length,   Icon: Volume2,     iconColor: "var(--accent)" },
+            { labelKey: "voice.status.ready", value: readyCount,      Icon: CheckCircle2, iconColor: "var(--green)"  },
+            { labelKey: "voice.processing",   value: processingCount, Icon: Loader2,      iconColor: "var(--amber)"  },
+          ] as const).map(({ labelKey, value, Icon, iconColor }) => (
+            <div key={labelKey} className="stat-card">
+              <div className="stat-icon" style={{ color: iconColor }}>
+                <Icon size={14} className={labelKey === "voice.processing" && processingCount > 0 ? "animate-spin" : ""} />
               </div>
               <div>
-                <p className="text-lg font-bold" style={{ color: "hsl(var(--foreground))" }}>{value}</p>
-                <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{t(labelKey)}</p>
+                <p className="text-lg font-bold" style={{ color: "var(--t1)", fontFamily: "'IBM Plex Mono', monospace" }}>{value}</p>
+                <p className="text-xs" style={{ color: "var(--t2)" }}>{t(labelKey)}</p>
               </div>
             </div>
           ))}
@@ -498,25 +471,25 @@ export default function VoiceStudioPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-36 rounded-2xl animate-pulse" style={{ backgroundColor: "hsl(var(--muted))" }} />
+            <div key={i} className="skeleton h-36" />
           ))}
         </div>
       ) : voices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
-            style={{ background: GRADIENTS.voiceCard }}
+            className="w-16 h-16 flex items-center justify-center mb-5"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", borderRadius: "var(--r-card)" }}
           >
-            <Mic size={32} className="text-white" />
+            <Mic size={28} style={{ color: "var(--accent)" }} />
           </div>
-          <h2 className="text-lg font-bold mb-2" style={{ color: "hsl(var(--foreground))" }}>
+          <h2 className="text-lg font-bold mb-2" style={{ color: "var(--t1)" }}>
             {t("voice.noVoices")}
           </h2>
-          <p className="text-sm mb-6 max-w-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <p className="text-sm mb-6 max-w-xs" style={{ color: "var(--t2)" }}>
             {t("voice.noVoicesHint")}
           </p>
           <button onClick={() => setShowCreate(true)} className="btn-primary">
-            <Sparkles size={15} />
+            <Plus size={14} />
             {t("voice.startCloning")}
           </button>
         </div>

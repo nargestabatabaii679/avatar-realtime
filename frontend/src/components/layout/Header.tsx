@@ -327,8 +327,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-accent transition-colors"
         >
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            style={{ background: "var(--gradient-primary)" }}
+            className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", color: "var(--accent)" }}
           >
             {userInitial}
           </div>
@@ -356,8 +356,8 @@ export function Header({ onMenuClick }: HeaderProps) {
               <div className="px-3 py-2.5 border-b" style={{ borderColor: "hsl(var(--border))" }}>
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: "var(--gradient-primary)" }}
+                    className="w-8 h-8 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                    style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", color: "var(--accent)" }}
                   >
                     {userInitial}
                   </div>

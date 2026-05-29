@@ -44,8 +44,8 @@ export function Modal({ open, onClose, title, subtitle, icon, children, maxWidth
             <div className="flex items-center gap-3">
               {icon && (
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white"
-                  style={{ background: "var(--gradient-primary)" }}
+                  className="w-9 h-9 flex items-center justify-center"
+                  style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", borderRadius: "var(--r-tag)", color: "var(--accent)" }}
                 >
                   {icon}
                 </div>

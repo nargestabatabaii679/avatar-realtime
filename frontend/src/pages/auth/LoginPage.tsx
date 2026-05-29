@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Loader2, Zap, Shield, Globe, User, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2, Zap, Shield, Globe, User, Mail, Lock, Mic } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { cn } from "../../utils/cn";
 
@@ -26,10 +26,10 @@ type LoginData = z.infer<typeof loginSchema>;
 type RegisterData = z.infer<typeof registerSchema>;
 
 const features = [
-  { icon: "🎭", title: "آواتار واقعی",   desc: "تبدیل عکس به آواتار سخنگو با هوش مصنوعی" },
-  { icon: "🗣️", title: "صدای طبیعی",    desc: "کلونینگ صدا با XTTS-v2 بهینه برای فارسی" },
-  { icon: "⚡", title: "لیپ‌سینک ۵۰fps", desc: "حرکات طبیعی لب، پلک و میکروحالت‌ها" },
-  { icon: "🌐", title: "چندزبانه",       desc: "فارسی، انگلیسی، عربی، ترکی و بیشتر" },
+  { Icon: User,  title: "آواتار واقعی",    desc: "تبدیل عکس به آواتار سخنگو با هوش مصنوعی" },
+  { Icon: Mic,   title: "صدای طبیعی",     desc: "کلونینگ صدا با XTTS-v2 بهینه برای فارسی" },
+  { Icon: Zap,   title: "لیپ‌سینک ۵۰fps", desc: "حرکات طبیعی لب، پلک و میکروحالت‌ها" },
+  { Icon: Globe, title: "چندزبانه",        desc: "فارسی، انگلیسی، عربی، ترکی و بیشتر" },
 ];
 
 export default function LoginPage() {
@@ -74,84 +74,74 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex overflow-hidden bg-background">
 
-      {/* ─── Left: Cinematic Panel ─── */}
-      <div className="hidden lg:flex lg:w-[54%] relative flex-col bg-mesh noise overflow-hidden">
-        <div className="absolute inset-0 grid-pattern opacity-40 pointer-events-none" />
-
-        {/* Floating orbs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-8%] left-[-8%] w-[520px] h-[520px] rounded-full opacity-30"
-            style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)", animation: "float 7s ease-in-out infinite" }} />
-          <div className="absolute bottom-[-6%] right-[-6%] w-[420px] h-[420px] rounded-full opacity-25"
-            style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)", animation: "float 9s ease-in-out infinite reverse" }} />
-          <div className="absolute top-[45%] right-[8%] w-[280px] h-[280px] rounded-full opacity-20"
-            style={{ background: "radial-gradient(circle, #3b82f6 0%, transparent 70%)", animation: "float 6s ease-in-out infinite 1.5s" }} />
-        </div>
+      {/* ─── Left: Info Panel ─── */}
+      <div className="hidden lg:flex lg:w-[54%] relative flex-col overflow-hidden"
+        style={{ background: "var(--s1)", borderRight: "0.5px solid var(--border-rest)" }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)", backgroundSize: "24px 24px", opacity: 0.4 }} />
 
         <div className="relative z-10 flex flex-col h-full p-12">
           {/* Logo */}
           <div className="flex items-center gap-3 animate-fade-in-down">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
-              style={{ background: "var(--gradient-primary)", boxShadow: "0 0 32px rgba(91,95,239,.6)" }}>
-              <span className="text-white font-black text-xl">A</span>
+            <div className="w-10 h-10 rounded flex items-center justify-center"
+              style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)" }}>
+              <span className="font-black text-xl" style={{ color: "var(--accent)" }}>A</span>
             </div>
             <div>
-              <p className="text-white font-bold text-base leading-none">Avatar</p>
-              <p className="text-white/50 text-xs leading-none mt-0.5">AI Platform</p>
+              <p className="font-bold text-base leading-none" style={{ color: "var(--t1)" }}>Avatar</p>
+              <p className="text-xs leading-none mt-0.5" style={{ color: "var(--t3)" }}>AI Platform</p>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col justify-center animate-fade-in-up" style={{ animationDelay: ".1s" }}>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-7 w-fit"
-              style={{ background: "rgba(91,95,239,.18)", border: "1px solid rgba(91,95,239,.35)" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-indigo-200 text-xs font-medium">هوش مصنوعی نسل جدید</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-7 w-fit"
+              style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", borderRadius: "var(--r-tag)" }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--green)" }} />
+              <span className="text-xs font-medium" style={{ color: "var(--accent)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>هوش مصنوعی نسل جدید</span>
             </div>
 
-            <h1 className="text-5xl xl:text-6xl font-black text-white leading-[1.1] mb-6">
-              ساخت<br />
-              <span className="gradient-text" style={{ backgroundImage: "linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 50%, #f0abfc 100%)" }}>
-                آواتار
-              </span>
-              <br />سخن‌گو
+            <h1 className="text-5xl xl:text-6xl font-black leading-[1.1] mb-6" style={{ color: "var(--t1)" }}>
+              ساخت <span style={{ color: "var(--accent)" }}>آواتار</span> سخن‌گو
             </h1>
 
-            <p className="text-indigo-200/70 text-base leading-relaxed max-w-sm mb-10">
-              عکس انسان را آپلود کنید، متن بنویسید،<br />
+            <p className="text-base leading-relaxed max-w-sm mb-10" style={{ color: "var(--t2)" }}>
+              عکس انسان را آپلود کنید، متن بنویسید،
               ویدیوی آواتار سخنگو بسازید — مثل D-ID و HeyGen
             </p>
 
             <div className="grid grid-cols-2 gap-3">
-              {features.map(({ icon, title, desc }, i) => (
+              {features.map(({ Icon, title, desc }, i) => (
                 <div key={title}
-                  className="p-3.5 rounded-2xl animate-fade-in-up"
+                  className="p-3.5 animate-fade-in-up"
                   style={{
                     animationDelay: `${.2 + i * .07}s`,
-                    background: "rgba(255,255,255,.05)",
-                    border: "1px solid rgba(255,255,255,.08)",
-                    backdropFilter: "blur(12px)",
+                    background: "var(--s2)",
+                    border: "0.5px solid var(--border-rest)",
+                    borderRadius: "var(--r-card)",
                   }}>
-                  <div className="text-2xl mb-1.5">{icon}</div>
-                  <p className="text-white text-sm font-bold mb-0.5">{title}</p>
-                  <p className="text-white/50 text-xs leading-relaxed">{desc}</p>
+                  <Icon size={14} style={{ color: "var(--accent)", marginBottom: "6px" }} />
+                  <p className="text-sm font-bold mb-0.5" style={{ color: "var(--t1)" }}>{title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--t3)" }}>{desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <p className="text-white/20 text-xs">© 2024 Avatar Platform · پلتفرم آواتار هوش مصنوعی</p>
+          <p className="text-xs" style={{ color: "var(--t4)" }}>© 2024 Avatar Platform · پلتفرم آواتار هوش مصنوعی</p>
         </div>
       </div>
 
       {/* ─── Right: Form Panel ─── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
+      <div className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden"
+        style={{ background: "var(--bg)" }}>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px)", backgroundSize: "24px 24px", opacity: 0.3 }} />
 
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center animate-fade-in">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
-            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-primary-lg)" }}>
-            <span className="text-white font-black text-xl">A</span>
+          <div className="inline-flex items-center justify-center w-12 h-12 mb-3"
+            style={{ background: "var(--accent-bg)", border: "0.5px solid var(--accent-md)", borderRadius: "var(--r-card)" }}>
+            <span className="font-black text-xl" style={{ color: "var(--accent)" }}>A</span>
           </div>
           <h1 className="text-2xl font-black text-foreground">Avatar Platform</h1>
         </div>
@@ -159,16 +149,20 @@ export default function LoginPage() {
         <div className="relative z-10 w-full max-w-[400px]">
 
           {/* Mode toggle tabs */}
-          <div className="flex bg-surface rounded-xl p-1 mb-7 border border-border">
+          <div className="flex mb-7"
+            style={{ borderBottom: "0.5px solid var(--border-rest)" }}>
             {(["login", "register"] as const).map((m) => (
               <button key={m}
                 onClick={() => switchMode(m)}
-                className={cn(
-                  "flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200",
-                  mode === m
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
+                className="flex-1 py-2.5 text-sm font-medium transition-all duration-150"
+                style={{
+                  color: mode === m ? "var(--accent)" : "var(--t3)",
+                  borderBottom: mode === m ? "1px solid var(--accent)" : "1px solid transparent",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: "12px",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
               >
                 {m === "login" ? "ورود" : "ثبت‌نام"}
               </button>
