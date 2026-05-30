@@ -85,3 +85,4 @@ _include(f"{_ENDPOINT_BASE}.knowledge",    prefix="/knowledge",    tags=["Knowle
 _include(f"{_ENDPOINT_BASE}.analytics",    prefix="/analytics",    tags=["Analytics"])
 _include(f"{_ENDPOINT_BASE}.admin",        prefix="/admin",        tags=["Admin"])
 _include(f"{_ENDPOINT_BASE}.realtime",     prefix="/realtime",     tags=["Realtime"])
+_include(f"{_ENDPOINT_BASE}.billing",      prefix="/billing",      tags=["Billing"])

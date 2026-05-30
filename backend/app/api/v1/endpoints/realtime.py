@@ -27,6 +27,8 @@ async def realtime_websocket(
     token: str = Query(...),
     agent_id: Optional[str] = Query(None),
     session_id: Optional[str] = Query(None),
+    avatar_id: Optional[str] = Query(None),
+    use_heygen: bool = Query(False),
 ):
     """
     Real-time conversational avatar WebSocket endpoint.
@@ -59,8 +61,26 @@ async def realtime_websocket(
 
     audio_buffer: list[bytes] = []
 
+    # Optionally create a HeyGen streaming session for lip-synced avatar
+    heygen_session_id: Optional[str] = None
+    heygen_sdp: Optional[str] = None
+    if use_heygen and avatar_id:
+        try:
+            from app.services.heygen import HeyGenService  # noqa: PLC0415
+            heygen = HeyGenService()
+            streaming_data = await heygen.create_streaming_session(avatar_id=avatar_id)
+            heygen_session_id = streaming_data.get("session_id")
+            heygen_sdp = streaming_data.get("sdp", {}).get("sdp")
+            log.info("heygen_streaming_session_created", heygen_session_id=heygen_session_id)
+        except Exception as exc:
+            log.warning("heygen_streaming_init_failed", error=str(exc))
+
     try:
-        await websocket.send_json({"type": "connected", "session_id": sid})
+        connected_payload: dict = {"type": "connected", "session_id": sid}
+        if heygen_session_id:
+            connected_payload["heygen_session_id"] = heygen_session_id
+            connected_payload["heygen_sdp"] = heygen_sdp
+        await websocket.send_json(connected_payload)
 
         while True:
             try:
@@ -127,8 +147,23 @@ async def realtime_websocket(
                     await websocket.send_json({"type": "error", "code": "LLM_FAILED", "message": str(e)})
                     continue
 
-                # TTS synthesis
+                # TTS synthesis + optional HeyGen lip-sync
                 try:
+                    if heygen_session_id:
+                        # Send text to HeyGen streaming session for real-time lip-sync
+                        try:
+                            from app.services.heygen import HeyGenService  # noqa: PLC0415
+                            heygen = HeyGenService()
+                            await heygen.send_streaming_text(heygen_session_id, llm_response)
+                            await websocket.send_json({
+                                "type": "heygen_speaking",
+                                "session_id": heygen_session_id,
+                                "text": llm_response,
+                            })
+                        except Exception as heygen_exc:
+                            log.warning("heygen_streaming_text_failed", error=str(heygen_exc))
+
+                    # Always synthesize audio as fallback / primary
                     audio_bytes = await _synthesize_speech(llm_response, agent_id)
                     import base64
                     await websocket.send_json({
@@ -153,6 +188,13 @@ async def realtime_websocket(
             pass
     finally:
         _active_sessions.pop(sid, None)
+        if heygen_session_id:
+            try:
+                from app.services.heygen import HeyGenService  # noqa: PLC0415
+                heygen = HeyGenService()
+                await heygen.close_streaming_session(heygen_session_id)
+            except Exception:
+                pass
         log.info("realtime_session_ended")
 
 
@@ -289,3 +331,48 @@ async def list_active_sessions(
 ):
     """List currently active real-time sessions."""
     return {"active_sessions": len(_active_sessions), "session_ids": list(_active_sessions.keys())}
+
+
+@router.post("/heygen/session", summary="Create a HeyGen real-time streaming session")
+async def create_heygen_session(
+    avatar_id: Optional[str] = None,
+    quality: str = "medium",
+    token: str = Query(...),
+) -> dict:
+    """
+    Create a HeyGen streaming session and return the WebRTC offer SDP + ICE servers
+    so the frontend can establish a direct video connection.
+    """
+    try:
+        payload = decode_token(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        from app.services.heygen import HeyGenService  # noqa: PLC0415
+        heygen = HeyGenService()
+        data = await heygen.create_streaming_session(avatar_id=avatar_id, quality=quality)
+        return {"status": "ok", "data": data}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.post("/heygen/sdp", summary="Submit WebRTC SDP answer to HeyGen")
+async def submit_heygen_sdp(
+    session_id: str,
+    sdp: str,
+    token: str = Query(...),
+) -> dict:
+    """Exchange the WebRTC SDP answer with HeyGen to complete peer connection setup."""
+    try:
+        decode_token(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        from app.services.heygen import HeyGenService  # noqa: PLC0415
+        heygen = HeyGenService()
+        result = await heygen.submit_streaming_sdp(session_id=session_id, sdp=sdp)
+        return {"status": "ok", "data": result}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc))

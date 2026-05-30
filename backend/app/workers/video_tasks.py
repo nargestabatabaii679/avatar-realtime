@@ -83,7 +83,7 @@ def generate_video_task(
                 update(VideoJob)
                 .where(VideoJob.video_id == UUID(video_id))
                 .values(
-                    status=JobStatus.RUNNING,
+                    status=JobStatus.STARTED,
                     celery_task_id=self.request.id,
                     started_at=__import__("datetime").datetime.utcnow(),
                 )
@@ -243,7 +243,7 @@ def generate_video_task(
                     update(Video)
                     .where(Video.id == UUID(video_id))
                     .values(
-                        status=VideoStatus.COMPLETED,
+                        status=VideoStatus.COMPLETED,  # type: ignore[attr-defined]
                         output_url=f"videos/{video_object}",
                         thumbnail_url=f"thumbnails/{thumb_object}",
                         file_size_bytes=stat.st_size,
@@ -254,7 +254,7 @@ def generate_video_task(
                     update(VideoJob)
                     .where(VideoJob.video_id == UUID(video_id))
                     .values(
-                        status=JobStatus.COMPLETED,
+                        status=JobStatus.SUCCESS,
                         progress=100,
                         completed_at=datetime.datetime.utcnow(),
                     )

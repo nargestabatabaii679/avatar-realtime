@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -28,6 +28,7 @@ from app.models.avatar import Avatar, AvatarStatus
 from app.models.video import Video, VideoResolution, VideoStatus
 from app.models.video_job import JobStatus, JobType, VideoJob
 from app.models.voice_model import VoiceModel, VoiceStatus
+from app.api.v1.endpoints.billing import check_video_quota
 
 logger = structlog.get_logger(__name__)
 
@@ -43,11 +44,12 @@ class VideoGenerateRequest(BaseModel):
     avatar_id: uuid.UUID
     voice_model_id: uuid.UUID | None = None
     script: str = Field(..., min_length=1, max_length=10000)
-    language: str = Field("en", max_length=10)
+    language: str = Field("fa", max_length=10)
     resolution: VideoResolution = VideoResolution.R_1080P
     template_id: uuid.UUID | None = None
     title: str | None = Field(None, max_length=255)
     description: str | None = None
+    provider: Literal["local", "heygen", "syncso"] = "local"
 
 
 class BatchGenerateRequest(BaseModel):
@@ -71,14 +73,13 @@ class VideoResponse(BaseModel):
     file_size_bytes: int | None
     view_count: int
     error_message: str | None
-    metadata: dict
+    metadata: dict = Field(default_factory=dict, alias="extra_metadata")
     user_id: uuid.UUID
     organization_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True, "populate_by_name": True}
 
 
 class VideoListResponse(BaseModel):
@@ -201,6 +202,7 @@ def _dispatch_video_pipeline(video_id: uuid.UUID, job_id: uuid.UUID) -> str:
             "workers.video.generate_video_pipeline",
             args=[str(video_id), str(job_id)],
             queue="gpu",
+            routing_key="gpu",
         )
         celery_task_id: str = result.id
         logger.info(
@@ -243,6 +245,7 @@ async def _get_presigned_url(object_name: str, bucket: str, expiry: int = 3600) 
     response_model=VideoResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Generate a talking avatar video",
+    dependencies=[Depends(check_video_quota)],
 )
 async def generate_video(
     payload: VideoGenerateRequest,
@@ -292,6 +295,7 @@ async def generate_video(
         resolution=payload.resolution,
         template_id=payload.template_id,
         status=VideoStatus.QUEUED,
+        extra_metadata={"provider": payload.provider},
     )
     db.add(video)
     await db.flush()

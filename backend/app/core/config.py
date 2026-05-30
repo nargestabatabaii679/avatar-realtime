@@ -295,14 +295,49 @@ class Settings(BaseSettings):
     LOG_FILE: Path | None = None
 
     # ──────────────────────────────────────────────
+    # HeyGen (Cloud Avatar Video Generation)
+    # ──────────────────────────────────────────────
+    HEYGEN_API_KEY: str = ""
+    HEYGEN_DEFAULT_AVATAR_ID: str = ""
+    HEYGEN_DEFAULT_VOICE_ID: str = ""
+    HEYGEN_TEST_MODE: bool = True   # Set False in production to avoid test watermark
+
+    # ──────────────────────────────────────────────
+    # Sync.so (Cloud Lip-Sync)
+    # ──────────────────────────────────────────────
+    SYNCSO_API_KEY: str = ""
+
+    # ──────────────────────────────────────────────
+    # Stripe (Billing)
+    # ──────────────────────────────────────────────
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_STARTER: str = ""       # price_xxx from Stripe dashboard
+    STRIPE_PRICE_PROFESSIONAL: str = ""
+    STRIPE_PRICE_ENTERPRISE: str = ""
+
+    # ──────────────────────────────────────────────
+    # Email (SMTP)
+    # ──────────────────────────────────────────────
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@daneshavaran.ai"
+    SMTP_FROM_NAME: str = "Daneshavaran AI"
+    SMTP_TLS: bool = True
+
+    # ──────────────────────────────────────────────
     # Supported Languages
     # ──────────────────────────────────────────────
     SUPPORTED_LANGUAGES: list[str] = [
+        "fa",  # Persian (Farsi) — primary language
         "en", "es", "fr", "de", "it", "pt", "nl",
         "ru", "zh", "ja", "ko", "ar", "hi", "tr",
         "pl", "sv", "da", "fi", "no", "cs",
     ]
-    DEFAULT_LANGUAGE: str = "en"
+    DEFAULT_LANGUAGE: str = "fa"
 
     # ──────────────────────────────────────────────
     # WebSocket
