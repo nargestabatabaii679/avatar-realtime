@@ -260,29 +260,45 @@ async def _get_llm_response(
     return await llm.complete(messages)
 
 
-async def _synthesize_speech(text: str, agent_id: Optional[str] = None) -> bytes:
-    """Synthesize speech and return raw WAV bytes."""
-    import tempfile, os
-    from app.ml.voice.xtts_engine import XTTSEngine
+async def _synthesize_speech(text: str, agent_id: Optional[str] = None, language: str = "fa") -> bytes:
+    """
+    Synthesize speech and return raw audio bytes.
+
+    Strategy (in order):
+    1. edge-tts  — free, no GPU, excellent Persian support
+    2. XTTS-v2   — local GPU model, voice cloning if agent has a voice model
+    """
+    # ── Primary: edge-tts (free, no API key) ──────────────────────────────
+    try:
+        from app.services.edge_tts_service import get_edge_tts  # noqa: PLC0415
+        edge = get_edge_tts()
+        audio_bytes = await edge.synthesize_to_bytes(text=text, language=language)
+        logger.debug("tts_via_edge_tts", language=language, bytes=len(audio_bytes))
+        return audio_bytes
+    except Exception as edge_exc:
+        logger.warning("edge_tts_failed", error=str(edge_exc))
+
+    # ── Fallback: XTTS-v2 (local GPU) ─────────────────────────────────────
+    import tempfile, os  # noqa: PLC0415, E401
+    from app.ml.voice.xtts_engine import XTTSEngine  # noqa: PLC0415
 
     tts = XTTSEngine()
-
-    # Try to find agent's voice model
     voice_model_path = None
+
     if agent_id:
         try:
-            from app.core.database import AsyncSessionLocal
-            from app.models.agent import Agent
+            from app.core.database import AsyncSessionLocal  # noqa: PLC0415
+            from app.models.agent import Agent  # noqa: PLC0415
             async with AsyncSessionLocal() as db:
                 agent = await db.get(Agent, uuid.UUID(agent_id))
             if agent and agent.voice_model_id:
-                from app.models.voice_model import VoiceModel
+                from app.models.voice_model import VoiceModel  # noqa: PLC0415
                 async with AsyncSessionLocal() as db:
                     voice = await db.get(VoiceModel, agent.voice_model_id)
                 if voice and voice.model_file_url:
-                    import tempfile as tf
+                    import tempfile as tf  # noqa: PLC0415
                     tmp_voice = tf.mktemp(suffix=".pth")
-                    from app.services.storage.minio_service import download_to_path
+                    from app.services.storage.minio_service import download_to_path  # noqa: PLC0415
                     obj = "/".join(voice.model_file_url.split("/")[1:])
                     await download_to_path("voices", obj, tmp_voice)
                     voice_model_path = tmp_voice
@@ -295,7 +311,7 @@ async def _synthesize_speech(text: str, agent_id: Optional[str] = None) -> bytes
     try:
         await tts.synthesize(
             text=text,
-            language="fa",
+            language=language,
             voice_model_path=voice_model_path,
             output_path=tmp_out,
         )

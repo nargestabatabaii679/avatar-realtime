@@ -4,9 +4,14 @@ ml/llm/llm_router.py
 Multi-provider LLM abstraction layer with automatic failover and cost tracking.
 
 Supported providers:
+- Groq (FREE — llama-3.3-70b-versatile, 14,400 req/day)
+- Google Gemini Flash (FREE — gemini-1.5-flash, 1,500 req/day)
+- DeepSeek Chat API (very cheap)
 - OpenAI GPT-4o / GPT-3.5-turbo
-- DeepSeek Chat API
-- Ollama (local Llama 3 / Qwen / Mistral)
+- Ollama (local Llama 3 / Qwen / Mistral — fully offline)
+
+Provider priority (default AUTO mode):
+  Groq → Gemini → DeepSeek → OpenAI → Ollama
 
 Features:
 - Provider selection based on cost, speed, and availability
@@ -39,6 +44,8 @@ logger = structlog.get_logger(__name__)
 
 
 class LLMProvider(str, Enum):
+    GROQ = "groq"          # FREE — 14,400 req/day
+    GEMINI = "gemini"      # FREE — 1,500 req/day
     OPENAI = "openai"
     DEEPSEEK = "deepseek"
     OLLAMA = "ollama"
@@ -57,6 +64,22 @@ class ProviderConfig:
 
 
 PROVIDER_CONFIGS: dict[LLMProvider, ProviderConfig] = {
+    LLMProvider.GROQ: ProviderConfig(
+        name=LLMProvider.GROQ,
+        model="llama-3.3-70b-versatile",
+        max_context_tokens=128_000,
+        cost_per_1k_input=0.0,
+        cost_per_1k_output=0.0,
+        avg_tokens_per_second=300.0,   # Groq is extremely fast
+    ),
+    LLMProvider.GEMINI: ProviderConfig(
+        name=LLMProvider.GEMINI,
+        model="gemini-1.5-flash",
+        max_context_tokens=1_000_000,
+        cost_per_1k_input=0.0,
+        cost_per_1k_output=0.0,
+        avg_tokens_per_second=150.0,
+    ),
     LLMProvider.OPENAI: ProviderConfig(
         name=LLMProvider.OPENAI,
         model="gpt-4o",
@@ -162,22 +185,76 @@ class LLMRouter:
             print(chunk, end="", flush=True)
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        provider: str | LLMProvider = LLMProvider.AUTO,
+        model: str | None = None,
+    ) -> None:
         from app.core.config import settings  # noqa: PLC0415
 
         self._settings = settings
         self._openai_client: Any = None
         self._deepseek_client: Any = None
+        self._groq_client: Any = None
         self._ollama_base_url: str = "http://localhost:11434"
+
+        # Default provider/model set via constructor (used by simple complete() calls)
+        if isinstance(provider, str):
+            try:
+                self._default_provider = LLMProvider(provider)
+            except ValueError:
+                self._default_provider = LLMProvider.AUTO
+        else:
+            self._default_provider = provider
+        self._default_model = model
 
         # Runtime availability cache (checked lazily)
         self._provider_availability: dict[LLMProvider, bool] = {
             p: True for p in LLMProvider if p != LLMProvider.AUTO
         }
 
+    # ── Simple dict-based API (used by realtime.py and agents) ───────────────
+
+    async def complete(  # type: ignore[override]
+        self,
+        messages: list[dict[str, Any]] | LLMRequest,
+        system_prompt: str | None = None,
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+    ) -> str:
+        """
+        Convenience method: accepts plain dict messages, returns text string.
+
+        Compatible with: ``LLMRouter(provider="groq").complete(messages)``
+        """
+        if isinstance(messages, LLMRequest):
+            resp = await self._complete_request(messages)
+            return resp.text
+
+        msg_objects = [
+            Message(role=m["role"], content=m.get("content", ""))
+            for m in messages
+        ]
+        request = LLMRequest(
+            messages=msg_objects,
+            system_prompt=system_prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            provider=self._default_provider,
+            model_override=self._default_model,
+        )
+        resp = await self._complete_request(request)
+        if resp.error:
+            raise RuntimeError(f"LLM error ({resp.provider}): {resp.error}")
+        return resp.text
+
+    async def _complete_request(self, request: LLMRequest) -> LLMResponse:
+        """Internal: run the full retry logic."""
+        return await self._complete_with_retry(request)
+
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def complete(
+    async def _complete_with_retry(
         self,
         request: LLMRequest,
         max_retries: int = 3,
@@ -326,7 +403,11 @@ class LLMRouter:
         messages: list[dict[str, Any]],
         request: LLMRequest,
     ) -> LLMResponse:
-        if provider == LLMProvider.OPENAI:
+        if provider == LLMProvider.GROQ:
+            return await self._groq_complete(messages, request)
+        elif provider == LLMProvider.GEMINI:
+            return await self._gemini_complete(messages, request)
+        elif provider == LLMProvider.OPENAI:
             return await self._openai_complete(messages, request)
         elif provider == LLMProvider.DEEPSEEK:
             return await self._deepseek_complete(messages, request)
@@ -340,7 +421,13 @@ class LLMRouter:
         messages: list[dict[str, Any]],
         request: LLMRequest,
     ) -> AsyncIterator[str]:
-        if provider == LLMProvider.OPENAI:
+        if provider == LLMProvider.GROQ:
+            async for chunk in self._groq_stream(messages, request):
+                yield chunk
+        elif provider == LLMProvider.GEMINI:
+            async for chunk in self._gemini_stream(messages, request):
+                yield chunk
+        elif provider == LLMProvider.OPENAI:
             async for chunk in self._openai_stream(messages, request):
                 yield chunk
         elif provider == LLMProvider.DEEPSEEK:
@@ -351,6 +438,180 @@ class LLMRouter:
                 yield chunk
         else:
             raise ValueError(f"Unknown provider: {provider}")
+
+    # ── Groq (FREE) ───────────────────────────────────────────────────────────
+
+    def _get_groq_client(self) -> Any:
+        if self._groq_client is None:
+            from openai import AsyncOpenAI  # noqa: PLC0415  (Groq is OpenAI-compatible)
+
+            groq_key = getattr(self._settings, "GROQ_API_KEY", "")
+            if not groq_key:
+                raise RuntimeError("GROQ_API_KEY not set")
+            self._groq_client = AsyncOpenAI(
+                api_key=groq_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
+        return self._groq_client
+
+    async def _groq_complete(
+        self,
+        messages: list[dict[str, Any]],
+        request: LLMRequest,
+    ) -> LLMResponse:
+        client = self._get_groq_client()
+        model = request.model_override or PROVIDER_CONFIGS[LLMProvider.GROQ].model
+
+        completion = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+        )
+        choice = completion.choices[0]
+        usage = completion.usage
+
+        return LLMResponse(
+            text=choice.message.content or "",
+            provider=LLMProvider.GROQ.value,
+            model=model,
+            input_tokens=usage.prompt_tokens,
+            output_tokens=usage.completion_tokens,
+            finish_reason=choice.finish_reason,
+            cost_usd=0.0,
+        )
+
+    async def _groq_stream(
+        self,
+        messages: list[dict[str, Any]],
+        request: LLMRequest,
+    ) -> AsyncIterator[str]:
+        client = self._get_groq_client()
+        model = request.model_override or PROVIDER_CONFIGS[LLMProvider.GROQ].model
+
+        stream = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            delta = chunk.choices[0].delta
+            if delta.content:
+                yield delta.content
+
+    # ── Google Gemini (FREE) ──────────────────────────────────────────────────
+
+    async def _gemini_complete(
+        self,
+        messages: list[dict[str, Any]],
+        request: LLMRequest,
+    ) -> LLMResponse:
+        gemini_key = getattr(self._settings, "GEMINI_API_KEY", "")
+        if not gemini_key:
+            raise RuntimeError("GEMINI_API_KEY not set")
+
+        import httpx  # noqa: PLC0415
+
+        model = request.model_override or PROVIDER_CONFIGS[LLMProvider.GEMINI].model
+
+        # Convert messages to Gemini format
+        gemini_contents = []
+        system_parts = []
+        for msg in messages:
+            if msg["role"] == "system":
+                system_parts.append({"text": msg["content"]})
+            elif msg["role"] == "user":
+                gemini_contents.append({"role": "user", "parts": [{"text": msg["content"]}]})
+            elif msg["role"] == "assistant":
+                gemini_contents.append({"role": "model", "parts": [{"text": msg["content"]}]})
+
+        payload: dict[str, Any] = {
+            "contents": gemini_contents,
+            "generationConfig": {
+                "maxOutputTokens": request.max_tokens,
+                "temperature": request.temperature,
+            },
+        }
+        if system_parts:
+            payload["systemInstruction"] = {"parts": system_parts}
+
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                params={"key": gemini_key},
+                json=payload,
+            )
+        resp.raise_for_status()
+        data = resp.json()
+
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        usage = data.get("usageMetadata", {})
+
+        return LLMResponse(
+            text=text,
+            provider=LLMProvider.GEMINI.value,
+            model=model,
+            input_tokens=usage.get("promptTokenCount", 0),
+            output_tokens=usage.get("candidatesTokenCount", 0),
+            cost_usd=0.0,
+        )
+
+    async def _gemini_stream(
+        self,
+        messages: list[dict[str, Any]],
+        request: LLMRequest,
+    ) -> AsyncIterator[str]:
+        """Gemini streaming via SSE."""
+        gemini_key = getattr(self._settings, "GEMINI_API_KEY", "")
+        if not gemini_key:
+            raise RuntimeError("GEMINI_API_KEY not set")
+
+        import httpx  # noqa: PLC0415
+
+        model = request.model_override or PROVIDER_CONFIGS[LLMProvider.GEMINI].model
+
+        gemini_contents = []
+        system_parts = []
+        for msg in messages:
+            if msg["role"] == "system":
+                system_parts.append({"text": msg["content"]})
+            elif msg["role"] == "user":
+                gemini_contents.append({"role": "user", "parts": [{"text": msg["content"]}]})
+            elif msg["role"] == "assistant":
+                gemini_contents.append({"role": "model", "parts": [{"text": msg["content"]}]})
+
+        payload: dict[str, Any] = {
+            "contents": gemini_contents,
+            "generationConfig": {
+                "maxOutputTokens": request.max_tokens,
+                "temperature": request.temperature,
+            },
+        }
+        if system_parts:
+            payload["systemInstruction"] = {"parts": system_parts}
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream(
+                "POST",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent",
+                params={"key": gemini_key, "alt": "sse"},
+                json=payload,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if line.startswith("data: "):
+                        chunk_json = line[6:]
+                        if chunk_json.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(chunk_json)
+                            text = data["candidates"][0]["content"]["parts"][0]["text"]
+                            if text:
+                                yield text
+                        except (KeyError, json.JSONDecodeError):
+                            continue
 
     # ── OpenAI ────────────────────────────────────────────────────────────────
 
@@ -574,32 +835,65 @@ class LLMRouter:
         if request.provider != LLMProvider.AUTO:
             return request.provider
 
-        # Priority: DeepSeek (cheapest) → OpenAI → Ollama
-        order = [LLMProvider.DEEPSEEK, LLMProvider.OPENAI, LLMProvider.OLLAMA]
+        # Default priority: free first, then cheap, then expensive, then local
+        # Groq → Gemini → DeepSeek → OpenAI → Ollama
+        order = [
+            LLMProvider.GROQ,
+            LLMProvider.GEMINI,
+            LLMProvider.DEEPSEEK,
+            LLMProvider.OPENAI,
+            LLMProvider.OLLAMA,
+        ]
 
-        # If tools are required, only OpenAI reliably supports them
+        # Tool/function calling: Groq + OpenAI support it; Gemini has its own format
         if request.tools:
-            order = [LLMProvider.OPENAI, LLMProvider.DEEPSEEK, LLMProvider.OLLAMA]
+            order = [LLMProvider.GROQ, LLMProvider.OPENAI, LLMProvider.DEEPSEEK, LLMProvider.OLLAMA]
 
         for provider in order:
-            if self._provider_availability.get(provider, False):
-                config = PROVIDER_CONFIGS.get(provider)
-                if config and config.available:
-                    return provider
+            if not self._provider_availability.get(provider, True):
+                continue
+            config = PROVIDER_CONFIGS.get(provider)
+            if not config or not config.available:
+                continue
+            # Check that the API key is configured (skip if not)
+            if not self._has_api_key(provider):
+                continue
+            return provider
 
-        return LLMProvider.OPENAI  # final fallback
+        return LLMProvider.OLLAMA  # final offline fallback
+
+    def _has_api_key(self, provider: LLMProvider) -> bool:
+        """Return True if the required API key is set for this provider."""
+        key_map = {
+            LLMProvider.GROQ: "GROQ_API_KEY",
+            LLMProvider.GEMINI: "GEMINI_API_KEY",
+            LLMProvider.OPENAI: "OPENAI_API_KEY",
+            LLMProvider.DEEPSEEK: "DEEPSEEK_API_KEY",
+            LLMProvider.OLLAMA: None,  # no key needed
+        }
+        key_attr = key_map.get(provider)
+        if key_attr is None:
+            return True
+        return bool(getattr(self._settings, key_attr, ""))
 
     def _fallback_provider(self, current: LLMProvider) -> LLMProvider:
         """Return the next available provider after ``current``."""
-        order = [LLMProvider.DEEPSEEK, LLMProvider.OPENAI, LLMProvider.OLLAMA]
+        order = [
+            LLMProvider.GROQ,
+            LLMProvider.GEMINI,
+            LLMProvider.DEEPSEEK,
+            LLMProvider.OPENAI,
+            LLMProvider.OLLAMA,
+        ]
         try:
             idx = order.index(current)
         except ValueError:
             idx = -1
         for i in range(idx + 1, len(order)):
-            if self._provider_availability.get(order[i], True):
-                return order[i]
-        return LLMProvider.OPENAI
+            p = order[i]
+            if self._provider_availability.get(p, True) and self._has_api_key(p):
+                return p
+        return LLMProvider.OLLAMA
 
     def _prepare_messages(self, request: LLMRequest) -> list[dict[str, Any]]:
         """Build final message list, injecting system prompt if needed."""

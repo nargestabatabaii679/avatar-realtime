@@ -196,6 +196,25 @@ class Settings(BaseSettings):
     OPENAI_TEMPERATURE: float = 0.7
 
     # ──────────────────────────────────────────────
+    # Groq (FREE — https://console.groq.com)
+    # 14,400 req/day · llama-3.3-70b-versatile
+    # ──────────────────────────────────────────────
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+    # ──────────────────────────────────────────────
+    # Google Gemini (FREE — https://aistudio.google.com)
+    # 1,500 req/day · gemini-1.5-flash
+    # ──────────────────────────────────────────────
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+
+    # ──────────────────────────────────────────────
+    # DeepSeek (very cheap — https://platform.deepseek.com)
+    # ──────────────────────────────────────────────
+    DEEPSEEK_API_KEY: str = ""
+
+    # ──────────────────────────────────────────────
     # GPU / Hardware
     # ──────────────────────────────────────────────
     USE_GPU: bool = True
